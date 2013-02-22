@@ -195,3 +195,4 @@ parsePPM bs = case parse imagesParser bs of
     Done ""   images -> Right (images, Nothing)
     Done rest images -> Right (images, Just rest)
     Partial _        -> error "parsePPM bug: Got a partial result after end of input"
+    Fail _ _ e       -> Left e
