@@ -105,6 +105,8 @@ magicNumberParser = do
 ppmParser :: Parser PPM
 ppmParser = do
   ppmType <- magicNumberParser
+  -- TODO Implement the other netpbm image types
+  when (ppmType /= P6) $ error "haskell-netpbm currently only supports PPM P6"
   comments
   skipSpace
   comments
