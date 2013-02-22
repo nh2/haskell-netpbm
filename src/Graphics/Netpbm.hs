@@ -13,6 +13,7 @@ module Graphics.Netpbm (
 , PPM (..)
 , PpmPixelRGB8
 , PpmPixelRGB16
+, PpmPixelData (..)
 , parsePPM
 , PpmParseResult
 -- TODO expose attoparsec functions in .Internal package
@@ -27,6 +28,8 @@ import           Data.ByteString (ByteString)
 import           Data.Char (ord)
 import           Data.List (foldl')
 import           Data.Word (Word8, Word16)
+import           Foreign.Storable.Record as Store
+import           Foreign.Storable (Storable (..))
 
 import qualified Data.Vector.Unboxed as U
 import qualified Data.Vector.Generic
@@ -77,6 +80,8 @@ data PpmPixelData = PpmPixelDataRGB8 (U.Vector PpmPixelRGB8)   -- ^ For 8-bit PP
                   | PpmPixelDataRGB16 (U.Vector PpmPixelRGB16) -- ^ For 16-bit PPMs.
 
 
+-- * Unbox instance for pixels
+
 derivingUnbox "PpmPixelRGB8"
     [t| PpmPixelRGB8 -> (Word8, Word8, Word8) |]
     [| \ (PpmPixelRGB8 a b c) -> (a, b, c) |]
@@ -86,6 +91,35 @@ derivingUnbox "PpmPixelRGB16"
     [t| PpmPixelRGB16 -> (Word16, Word16, Word16) |]
     [| \ (PpmPixelRGB16 a b c) -> (a, b, c) |]
     [| \ (a, b, c) -> PpmPixelRGB16 a b c |]
+
+
+-- * Storable instance for pixels
+
+storePixel8 :: Store.Dictionary PpmPixelRGB8
+storePixel8 =
+  Store.run $ liftA3 PpmPixelRGB8
+    (Store.element (\(PpmPixelRGB8 x _ _) -> x))
+    (Store.element (\(PpmPixelRGB8 _ y _) -> y))
+    (Store.element (\(PpmPixelRGB8 _ _ z) -> z))
+
+storePixel16 :: Store.Dictionary PpmPixelRGB16
+storePixel16 =
+  Store.run $ liftA3 PpmPixelRGB16
+    (Store.element (\(PpmPixelRGB16 x _ _) -> x))
+    (Store.element (\(PpmPixelRGB16 _ y _) -> y))
+    (Store.element (\(PpmPixelRGB16 _ _ z) -> z))
+
+instance Storable PpmPixelRGB8 where
+  sizeOf = Store.sizeOf storePixel8
+  alignment = Store.alignment storePixel8
+  peek = Store.peek storePixel8
+  poke = Store.poke storePixel8
+
+instance Storable PpmPixelRGB16 where
+  sizeOf = Store.sizeOf storePixel16
+  alignment = Store.alignment storePixel16
+  peek = Store.peek storePixel16
+  poke = Store.poke storePixel16
 
 
 -- | Parses a netpbm magic number.
