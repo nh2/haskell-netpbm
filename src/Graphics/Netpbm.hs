@@ -2,6 +2,12 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, TypeFamilies, MultiParamTypeClasses, TemplateHaskell #-}
 
 
+-- | Parsing the netpbm image formates (PBM, PGM and PPM, both ASCII and binary) from 'ByteString's.
+--
+-- To parse one of these formats, use `parsePPM`.
+--
+-- Currently, only P6 images are implemented.
+-- Implementing the other types should be straighforward.
 module Graphics.Netpbm (
   PPMType (..)
 , PPM (..)
@@ -29,15 +35,17 @@ import qualified Data.Vector.Generic.Mutable
 import Data.Vector.Unboxed.Deriving
 
 
-data PPMType = P1 -- ASCII bitmap
-             | P2 -- ASCII greymap
-             | P3 -- ASCII pixmap (color)
-             | P4 -- binary bitmap
-             | P5 -- binary greymap
-             | P6 -- binary pixmap (color)
+-- | The netpbm image type of an image.
+data PPMType = P1 -- ^ ASCII bitmap
+             | P2 -- ^ ASCII greymap
+             | P3 -- ^ ASCII pixmap (color)
+             | P4 -- ^ binary bitmap
+             | P5 -- ^ binary greymap
+             | P6 -- ^ binary pixmap (color)
              deriving (Eq, Show, Enum, Ord)
 
 
+-- | A PPM file with type, dimensions, and image data.
 data PPM = PPM {
   ppmType :: PPMType
 , ppmWidth  :: {-# UNPACK #-} !Int
@@ -52,18 +60,21 @@ instance Show PPM where
       dim = show (ppmWidth, ppmHeight)
 
 
+-- | A pixel containing three 8-bit color components, RGB.
 data PpmPixelRGB8 = PpmPixelRGB8 {-# UNPACK #-} !Word8 -- Red
                                  {-# UNPACK #-} !Word8 -- Green
                                  {-# UNPACK #-} !Word8 -- Blue
                                  deriving (Eq, Show)
 
+-- | A pixel containing three 16-bit color components, RGB.
 data PpmPixelRGB16 = PpmPixelRGB16 {-# UNPACK #-} !Word16 -- Red
                                    {-# UNPACK #-} !Word16 -- Green
                                    {-# UNPACK #-} !Word16 -- Blue
                                    deriving (Eq, Show)
 
-data PpmPixelData = PpmPixelDataRGB8 (U.Vector PpmPixelRGB8)
-                  | PpmPixelDataRGB16 (U.Vector PpmPixelRGB16)
+-- | Image data, either 8 or 16 bits.
+data PpmPixelData = PpmPixelDataRGB8 (U.Vector PpmPixelRGB8)   -- ^ For 8-bit PPMs.
+                  | PpmPixelDataRGB16 (U.Vector PpmPixelRGB16) -- ^ For 16-bit PPMs.
 
 
 derivingUnbox "PpmPixelRGB8"
@@ -77,6 +88,8 @@ derivingUnbox "PpmPixelRGB16"
     [| \ (a, b, c) -> PpmPixelRGB16 a b c |]
 
 
+-- | Parses a netpbm magic number.
+-- One of P1, P2, P3, P4, P5, P6.
 magicNumberParser :: Parser PPMType
 magicNumberParser = do
   magic <- choice ["P1", "P2", "P3", "P4", "P5", "P6"]
@@ -91,17 +104,21 @@ magicNumberParser = do
     _    -> fail $ "PPM: uknown PPM format " ++ show magic
 
 
+
+-- | Parses a SINGLE PPM file.
+--
+-- Specification: http://netpbm.sourceforge.net/doc/ppm.html
+--
+-- There can be multiple images in one file, each starting with
+-- a "Pn" magic number.
+--
 -- Comments starting with '#' can only be
 -- "before the whitespace character that delimits the raster"
 -- (see http://netpbm.sourceforge.net/doc/pbm.html).
 -- Nevertheless, I interpret that as "comments cannot be
 -- inside the magic number".
-
--- There can be multiple images in one file, each starting with
--- a "Pn" magic number.
-
--- Specification: http://netpbm.sourceforge.net/doc/ppm.html
--- PRE: The input must have it's comments stripped off already.
+--
+-- See also the notes for `imagesParser`.
 ppmParser :: Parser PPM
 ppmParser = do
   ppmType <- magicNumberParser
@@ -143,18 +160,24 @@ ppmParser = do
     shiftDecimalChar a d = a * 10 + ord d - (48 :: Int)
 
 
+-- | Parses a full PPM file, containing one or more images.
+--
 -- "A PPM file consists of a sequence of one or more PPM images."
 -- We allow trailing whitespace after images, which is AGAINST THE SPEC:
 --
---   "A PPM file consists of a sequence of one or more PPM images.
---    There are no data, delimiters, or padding before, after, or between images."
+-- >"A PPM file consists of a sequence of one or more PPM images.
+-- > There are no data, delimiters, or padding before, after, or between images."
 --
 -- However, you can find PPM files that have trailing whitespace, especially a '\n'.
 imagesParser :: Parser [PPM]
 imagesParser = many1 (ppmParser <* skipSpace)
 
 
+-- | The result of a PPM parse.
+--
+-- See `parsePPM`.
 type PpmParseResult = Either String ([PPM], Maybe ByteString)
+
 
 -- | Parses a PPM file from the given 'ByteString'.
 -- On failure, @Left error@ contains the error message.
