@@ -1,5 +1,5 @@
 name:          netpbm
-version:       0.2.0
+version:       0.1.0
 license:       MIT
 copyright:     2013 Niklas Hambüchen <mail@nh2.me>
 author:        Niklas Hambüchen <mail@nh2.me>
@@ -25,10 +25,8 @@ library
     Graphics.Netpbm
   build-depends:
       base < 5
-    , aeson >= 0.3
     , attoparsec >= 0.10
     , attoparsec-binary >= 0.2
-    , bson >= 0.2
     , bytestring >= 0.10
     , unordered-containers >= 0.1.3.0
     , vector >= 0.7
@@ -48,8 +46,8 @@ test-Suite tests
     Main.hs
   build-depends:
       base >= 4
-    , bytestring >= 0.10
     , netpbm
+    , bytestring >= 0.10
     , hspec >= 1.3.0.1
     , HUnit >= 1.2
   ghc-options: -Wall
