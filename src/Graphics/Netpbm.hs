@@ -2,19 +2,25 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, TypeFamilies, MultiParamTypeClasses, TemplateHaskell #-}
 
 
-module Graphics.Netpbm where
+module Graphics.Netpbm (
+  PPMType (..)
+, PPM (..)
+, PpmPixelRGB8
+, PpmPixelRGB16
+, parsePPM
+, PpmParseResult
+-- TODO expose attoparsec functions in .Internal package
+) where
 
 import           Control.Monad
 import           Control.Applicative
 import           Data.Attoparsec.ByteString as A
 import           Data.Attoparsec.ByteString.Char8 as A8
 import           Data.Attoparsec.Binary (anyWord16be)
-import qualified Data.ByteString as BS
 import           Data.ByteString (ByteString)
 import           Data.Char (ord)
 import           Data.List (foldl')
 import           Data.Word (Word8, Word16)
-import           System.Exit (exitFailure)
 
 import qualified Data.Vector.Unboxed as U
 import qualified Data.Vector.Generic
@@ -164,12 +170,3 @@ parsePPM bs = case parse imagesParser bs of
     Done ""   images -> Right (images, Nothing)
     Done rest images -> Right (images, Just rest)
     Partial _        -> error "parsePPM bug: Got a partial result after end of input"
-
-
-ppmMain :: IO ()
-ppmMain = do
-  f <- BS.getContents
-
-  case parsePPM f of
-    Left e     -> (putStrLn $ "no parse: " ++ e) >> exitFailure
-    Right ppms -> print ppms
