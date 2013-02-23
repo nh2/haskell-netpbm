@@ -179,12 +179,12 @@ ppmParser = do
   comments
   _ <- A8.satisfy isSpace -- obligatory SINGLE whitespace
   -- Starting from here, comments are not allowed any more
-  raster <- if maxColorVal < 256 -- 1 or 2 bytes per pixel
-      -- TODO check if values are smaller than maxColorVal
-      then PpmPixelDataRGB8 <$> (U.replicateM (height * width) $
-             PpmPixelRGB8 <$> anyWord8 <*> anyWord8 <*> anyWord8)
-      else PpmPixelDataRGB16 <$> (U.replicateM (height * width) $
-             PpmPixelRGB16 <$> anyWord16be <*> anyWord16be <*> anyWord16be)
+  raster <- case maxColorVal of -- 1 or 2 bytes per pixel
+    -- Parse pixel data into vector, making sure that words don't exceed maxColorVal
+    m | m < 256   -> let v = word8max (fromIntegral m)
+                      in PpmPixelDataRGB8  <$> U.replicateM (height * width) (PpmPixelRGB8  <$> v <*> v <*> v)
+    m | otherwise -> let v = word16max (fromIntegral m)
+                      in PpmPixelDataRGB16 <$> U.replicateM (height * width) (PpmPixelRGB16 <$> v <*> v <*> v)
 
   return $ PPM (PPMHeader ppmType width height) raster
 
@@ -200,6 +200,11 @@ ppmParser = do
     decimalC = foldl' shiftDecimalChar 0 <$> ((:) <$> digit <*> many (comments *> digit))
     shiftDecimalChar a d = a * 10 + ord d - (48 :: Int)
 
+    -- Parsing words not bigger than given maxval
+    word8max m  = A.satisfy (<= m) <?> "pixel data must be smaller than maxval"
+    word16max m = do w16 <- anyWord16be
+                     when (not $ w16 <= m) $ fail "pixel data must be smaller than maxval"
+                     return w16
 
 -- | Parses a full PPM file, containing one or more images.
 --
