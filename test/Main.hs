@@ -13,7 +13,7 @@ checkSinglePPM :: PPMType -> (Int, Int) -> PpmParseResult -> Assertion
 checkSinglePPM typ size parseResult = case parseResult of
   Right ([PPM { ppmHeader = PPMHeader { ppmType, ppmWidth, ppmHeight } }], rest) -> (ppmType, (ppmWidth, ppmHeight), rest) `shouldBe` (typ, size, Nothing)
   Right (ppms, _)                                      -> assertFailure $ "expected only one image, but got " ++ show (length ppms)
-  _                                                    -> assertFailure "image parse failed"
+  Left e                                               -> assertFailure $ "image parse failed: " ++ e
 
 
 shouldNotParse :: PpmParseResult -> Assertion

@@ -226,14 +226,15 @@ type PpmParseResult = Either String ([PPM], Maybe ByteString)
 -- and potentially an unparsable rest input.
 parsePPM :: ByteString -> PpmParseResult
 parsePPM bs = case parse imagesParser bs of
-  Done ""   images -> Right (images, Nothing)
-  Done rest images -> Right (images, Just rest)
-  Fail _ _ e       -> Left e
   -- The image file ByteStrings are not terminated by '\0',
   -- so Attoparsec will issue a Partial result when it
   -- parses to EOF. Passing in "" signalizes EOF.
-  Partial cont -> case cont "" of
-    Done ""   images -> Right (images, Nothing)
-    Done rest images -> Right (images, Just rest)
-    Partial _        -> error "parsePPM bug: Got a partial result after end of input"
-    Fail _ _ e       -> Left e
+  Partial cont -> resultToEither (cont "")
+  r            -> resultToEither r
+  where
+    -- Assumes a Partial result has already been fed with "" (another Partial cannot happen)
+    resultToEither r = case r of
+      Done ""   images -> Right (images, Nothing)
+      Done rest images -> Right (images, Just rest)
+      Partial _        -> error "parsePPM bug: Got a partial result after end of input"
+      Fail _ cs e      -> Left $ e ++ "; contexts: " ++ show cs
