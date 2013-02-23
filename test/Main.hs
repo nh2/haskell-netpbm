@@ -1,4 +1,4 @@
-{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE NamedFieldPuns, OverloadedStrings #-}
 
 import qualified Data.ByteString as BS
 import           Control.Applicative
@@ -82,11 +82,21 @@ main = hspec $ do
 
     describe "comments" $ do
 
+      parseTestFile "gitlogo-comments.ppm" "comments as a sane user would write them" $
+        checkSinglePPM P6 (220,92)
+
       parseTestFile "gitlogo-comment-after-magic-number.ppm" "a comment directly after the P6" $
         checkSinglePPM P6 (220,92)
 
       parseTestFile "gitlogo-only-spaces-in-header.ppm" "only spaces as header separators" $
         checkSinglePPM P6 (220,92)
+
+      parseTestFile "gitlogo-comment-is-data.ppm" "the user thinks they wrote a comment, but it's actually parsed as data" $
+        \res -> case res of
+          Right ([PPM { ppmHeader }], Just rest) -> do ppmHeader `shouldBe` PPMHeader P6 220 92
+                                                       rest `shouldBe` "\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\n"
+          Right r                                -> assertFailure $ "parsed unexpected: " ++ show r
+          Left e                                 -> assertFailure $ "did not parse: " ++ e
 
 
     describe "weird files that are still OK with the spec" $ do
@@ -126,10 +136,14 @@ main = hspec $ do
 
     describe "negative examples" $ do
 
+      parseTestFile "bad/gitlogo-garbage-in-numbers.ppm" "ascii characters in a number" shouldNotParse
+
       parseTestFile "bad/gitlogo-width--1.ppm" "width '-1' set in an image" shouldNotParse
 
       parseTestFile "bad/gitlogo-not-enough-data.ppm" "not containing (width * height) bytes" shouldNotParse
 
       parseTestFile "bad/gitlogo-comment-in-magic-number.ppm" "comment inside magic number" shouldNotParse
+
+      parseTestFile "bad/gitlogo-comment-user-error.ppm" "a comment accidentally being put to close to a number, eating the following whitespace" $ shouldNotParse
 
       parseTestFile "bad/gitlogo-comment-without-following-extra-newline-before-data-block.ppm" "no non-comment whitespace before data block" shouldNotParse
