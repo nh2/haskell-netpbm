@@ -19,7 +19,7 @@ checkSinglePPM typ size parseResult = case parseResult of
 shouldNotParse :: PpmParseResult -> Assertion
 shouldNotParse res = case res of
   Left _ -> return ()
-  Right _ -> assertFailure "should not parse"
+  Right r -> assertFailure $ "should not parse, but parses as: " ++ show r
 
 
 parse :: FilePath -> IO PpmParseResult
@@ -72,11 +72,20 @@ main = hspec $ do
 
     parseTestFile "gitlogo-double.ppm" "a multi-image file" $ do
       \res -> case res of
-        Right ([PPM { ppmHeader = h1 }
+        Right ([ PPM { ppmHeader = h1 }
                , PPM { ppmHeader = h2 }], Nothing) -> do h1 `shouldBe` PPMHeader P6 220 92
                                                          h2 `shouldBe` PPMHeader P6 220 92
-        Right _                                    -> assertFailure "parsed unexpected"
-        Left _                                     -> assertFailure "did not parse"
+        Right r                                    -> assertFailure $ "parsed unexpected: " ++ show r
+        Left e                                     -> assertFailure $ "did not parse: " ++ e
+
+
+    describe "comments" $ do
+
+      parseTestFile "gitlogo-comment-after-magic-number.ppm" "a comment directly after the P6" $
+        checkSinglePPM P6 (220,92)
+
+      parseTestFile "gitlogo-only-spaces-in-header.ppm" "only spaces as header separators" $
+        checkSinglePPM P6 (220,92)
 
 
     describe "weird files that are still OK with the spec" $ do
@@ -85,8 +94,14 @@ main = hspec $ do
         \res -> case res of
           Right ([PPM { ppmHeader }], Just rest) -> do ppmHeader `shouldBe` PPMHeader P6 220 0
                                                        assertBool "missing rest" (BS.length rest > 200)
-          Right _                                -> assertFailure "parsed unexpected"
-          Left _                                 -> assertFailure "did not parse"
+          Right r                                -> assertFailure $ "parsed unexpected: " ++ show r
+          Left e                                 -> assertFailure $ "did not parse: " ++ e
+
+      parseTestFile "weird/gitlogo-comments-everywhere.ppm" "comments inside numbers" $
+        \res -> case res of
+          Right ([PPM { ppmHeader }], Nothing) -> do ppmHeader `shouldBe` PPMHeader P6 220 92
+          Right r                              -> assertFailure $ "parsed unexpected: " ++ show r
+          Left e                               -> assertFailure $ "did not parse: " ++ e
 
 
     describe "partially valid files of which we parse as much as we can" $ do
@@ -98,8 +113,16 @@ main = hspec $ do
         \res -> case res of
           Right ([PPM { ppmHeader }], Just rest) -> do ppmHeader `shouldBe` PPMHeader P6 220 92
                                                        assertBool "missing rest" (BS.length rest > 200)
-          Right _                                -> assertFailure "parsed unexpected"
-          Left _                                 -> assertFailure "did not parse"
+          Right r                                -> assertFailure $ "parsed unexpected: " ++ show r
+          Left e                                 -> assertFailure $ "did not parse: " ++ e
+
+      parseTestFile "graceful/gitlogo-double-with-whitespace-in-between.ppm" "a multi-image file with whitespace between the images" $
+        \res -> case res of
+          Right ([ PPM { ppmHeader = h1 }
+                 , PPM { ppmHeader = h2 }], Nothing) -> do h1 `shouldBe` PPMHeader P6 220 92
+                                                           h2 `shouldBe` PPMHeader P6 220 92
+          Right r                                    -> assertFailure $ "parsed unexpected: " ++ show r
+          Left e                                     -> assertFailure $ "did not parse: " ++ e
 
 
     describe "negative examples" $ do
@@ -107,3 +130,7 @@ main = hspec $ do
       parseTestFile "bad/gitlogo-width--1.ppm" "width '-1' set in an image" shouldNotParse
 
       parseTestFile "bad/gitlogo-not-enough-data.ppm" "not containing (width * height) bytes" shouldNotParse
+
+      parseTestFile "bad/gitlogo-comment-in-magic-number.ppm" "comment inside magic number" shouldNotParse
+
+      parseTestFile "bad/gitlogo-comment-without-following-extra-newline-before-data-block.ppm" "no non-comment whitespace before data block" shouldNotParse
