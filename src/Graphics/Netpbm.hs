@@ -180,6 +180,7 @@ ppmParser = do
   _ <- A8.satisfy isSpace -- obligatory SINGLE whitespace
   -- Starting from here, comments are not allowed any more
   raster <- if maxColorVal < 256 -- 1 or 2 bytes per pixel
+      -- TODO check if values are smaller than maxColorVal
       then PpmPixelDataRGB8 <$> (U.replicateM (height * width) $
              PpmPixelRGB8 <$> anyWord8 <*> anyWord8 <*> anyWord8)
       else PpmPixelDataRGB16 <$> (U.replicateM (height * width) $
