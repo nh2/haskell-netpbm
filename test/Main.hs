@@ -134,6 +134,20 @@ main = hspec $ do
           Left e                                  -> assertFailure $ "did not parse: " ++ e
 
 
+    describe "16-bit images" $ do
+
+      -- See http://wiki.simg.de/doku.php?id=common:formats#pnm_family
+      parseTestFile "gitlogo-16bit-created-by-simg_convert_-16be_gitlogo.ppm_output.ppm" "16-bit image created by simg" $
+        \res -> case res of
+          Right ([PPM { ppmHeader, ppmData }], rest) -> do ppmHeader `shouldBe` PPMHeader P6 220 92
+                                                           rest `shouldBe` Nothing
+                                                           case ppmData of
+                                                             PpmPixelDataRGB16 _ -> return ()
+                                                             _                   -> assertFailure $ "did not get 16-bit data"
+          Right r                                 -> assertFailure $ "parsed unexpected: " ++ show r
+          Left e                                  -> assertFailure $ "did not parse: " ++ e
+
+
     describe "negative examples" $ do
 
       parseTestFile "bad/gitlogo-garbage-in-numbers.ppm" "ascii characters in a number" shouldNotParse
