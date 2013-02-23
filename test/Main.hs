@@ -147,3 +147,5 @@ main = hspec $ do
       parseTestFile "bad/gitlogo-comment-user-error.ppm" "a comment accidentally being put to close to a number, eating the following whitespace" $ shouldNotParse
 
       parseTestFile "bad/gitlogo-comment-without-following-extra-newline-before-data-block.ppm" "no non-comment whitespace before data block" shouldNotParse
+
+      parseTestFile "bad/gitlogo-value-bigger-than-maxval.ppm" "subpixel value is bigger than maxval" shouldNotParse
