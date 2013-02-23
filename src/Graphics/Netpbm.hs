@@ -166,9 +166,11 @@ ppmParser = do
   skipSpace
   comments
   width <- decimalC
+  comments
   skipSpace
   comments
   height <- decimalC
+  comments
   skipSpace
   comments
   maxColorVal <- decimalC
@@ -191,10 +193,10 @@ ppmParser = do
     comment = "#" .*> A.takeWhile isNotNewline <* endOfLine
     isNotNewline w = w /= 10 && w /= 13
     -- Decimal, possibly with comments interleaved,
-    -- but starting with a digit.
+    -- but starting and ending with a digit.
     -- See the notes about comments above.
     decimalC :: Parser Int
-    decimalC = foldl' shiftDecimalChar 0 <$> many1' (digit <* comments)
+    decimalC = foldl' shiftDecimalChar 0 <$> ((:) <$> digit <*> many (comments *> digit))
     shiftDecimalChar a d = a * 10 + ord d - (48 :: Int)
 
 
