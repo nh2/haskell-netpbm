@@ -73,8 +73,9 @@ main = hspec $ do
     parseTestFile "gitlogo-double.ppm" "a multi-image file" $ do
       \res -> case res of
         Right ([ PPM { ppmHeader = h1 }
-               , PPM { ppmHeader = h2 }], Nothing) -> do h1 `shouldBe` PPMHeader P6 220 92
-                                                         h2 `shouldBe` PPMHeader P6 220 92
+               , PPM { ppmHeader = h2 }], rest) -> do h1 `shouldBe` PPMHeader P6 220 92
+                                                      h2 `shouldBe` PPMHeader P6 220 92
+                                                      rest `shouldBe` Nothing
         Right r                                    -> assertFailure $ "parsed unexpected: " ++ show r
         Left e                                     -> assertFailure $ "did not parse: " ++ e
 
@@ -98,10 +99,7 @@ main = hspec $ do
           Left e                                 -> assertFailure $ "did not parse: " ++ e
 
       parseTestFile "weird/gitlogo-comments-everywhere.ppm" "comments inside numbers" $
-        \res -> case res of
-          Right ([PPM { ppmHeader }], Nothing) -> do ppmHeader `shouldBe` PPMHeader P6 220 92
-          Right r                              -> assertFailure $ "parsed unexpected: " ++ show r
-          Left e                               -> assertFailure $ "did not parse: " ++ e
+        checkSinglePPM P6 (220,92)
 
 
     describe "partially valid files of which we parse as much as we can" $ do
@@ -119,10 +117,11 @@ main = hspec $ do
       parseTestFile "graceful/gitlogo-double-with-whitespace-in-between.ppm" "a multi-image file with whitespace between the images" $
         \res -> case res of
           Right ([ PPM { ppmHeader = h1 }
-                 , PPM { ppmHeader = h2 }], Nothing) -> do h1 `shouldBe` PPMHeader P6 220 92
-                                                           h2 `shouldBe` PPMHeader P6 220 92
-          Right r                                    -> assertFailure $ "parsed unexpected: " ++ show r
-          Left e                                     -> assertFailure $ "did not parse: " ++ e
+                 , PPM { ppmHeader = h2 }], rest) -> do h1 `shouldBe` PPMHeader P6 220 92
+                                                        h2 `shouldBe` PPMHeader P6 220 92
+                                                        rest `shouldBe` Nothing
+          Right r                                 -> assertFailure $ "parsed unexpected: " ++ show r
+          Left e                                  -> assertFailure $ "did not parse: " ++ e
 
 
     describe "negative examples" $ do
