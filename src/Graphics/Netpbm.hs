@@ -13,6 +13,7 @@ module Graphics.Netpbm (
 , PPM (..)
 , PpmPixelRGB8
 , PpmPixelRGB16
+, PPMHeader (..)
 , PpmPixelData (..)
 , parsePPM
 , PpmParseResult
@@ -50,15 +51,18 @@ data PPMType = P1 -- ^ ASCII bitmap
 
 -- | A PPM file with type, dimensions, and image data.
 data PPM = PPM {
-  ppmType :: PPMType
-, ppmWidth  :: {-# UNPACK #-} !Int
-, ppmHeight :: {-# UNPACK #-} !Int
+  ppmHeader :: PPMHeader
 , ppmData   :: PpmPixelData
 }
 
+data PPMHeader = PPMHeader {
+  ppmType   :: PPMType
+, ppmWidth  :: Int
+, ppmHeight :: Int
+} deriving (Eq, Show)
 
 instance Show PPM where
-  show PPM { ppmType, ppmWidth, ppmHeight } = "PPM " ++ show ppmType ++ " image " ++ dim
+  show PPM { ppmHeader = PPMHeader { ppmType, ppmWidth, ppmHeight } } = "PPM " ++ show ppmType ++ " image " ++ dim
     where
       dim = show (ppmWidth, ppmHeight)
 
@@ -179,7 +183,7 @@ ppmParser = do
       else PpmPixelDataRGB16 <$> (U.replicateM (height * width) $
              PpmPixelRGB16 <$> anyWord16be <*> anyWord16be <*> anyWord16be)
 
-  return $ PPM ppmType width height raster
+  return $ PPM (PPMHeader ppmType width height) raster
 
   where
     isValidColorVal v = v > 0 && v < 65536
