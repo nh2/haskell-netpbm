@@ -31,6 +31,10 @@ parseTestFile name desc check = it (desc ++ " (" ++ name ++ ")") $
   parse ("test/ppms/" ++ name) >>= check
 
 
+repcat :: Int -> [a] -> [a]
+repcat n = concat . replicate n
+
+
 main :: IO ()
 main = hspec $ do
   describe "P6 PPM (color binary)" $ do
@@ -163,3 +167,15 @@ main = hspec $ do
       parseTestFile "bad/gitlogo-comment-without-following-extra-newline-before-data-block.ppm" "no non-comment whitespace before data block" shouldNotParse
 
       parseTestFile "bad/gitlogo-value-bigger-than-maxval.ppm" "subpixel value is bigger than maxval" shouldNotParse
+
+
+  describe "P4 PBM (bitmap binary)" $ do
+
+    parseTestFile "testgrid.pbm" "the bitmap file from the netpbm test suite" $
+      \res -> case res of
+        Right ([PPM { ppmData }], Nothing) -> do checkSinglePPM P4 (14,16) res
+                                                 let expected = repcat 8 (repcat 7 [0,1] ++ replicate 14 0) :: [Int]
+                                                 pixelDataToIntList ppmData `shouldBe` expected
+        Right r                            -> assertFailure $ "parsed unexpected: " ++ show r
+        Left e                             -> assertFailure $ "did not parse: " ++ e
+

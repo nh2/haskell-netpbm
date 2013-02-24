@@ -6,15 +6,20 @@
 --
 -- To parse one of these formats, use `parsePPM`.
 --
--- Currently, only P6 images are implemented.
+-- Currently, only P4 and P6 images are implemented.
 -- Implementing the other types should be straighforward.
 module Graphics.Netpbm (
   PPMType (..)
 , PPM (..)
-, PpmPixelRGB8
-, PpmPixelRGB16
+, PpmPixelRGB8 (..)
+, PpmPixelRGB16 (..)
+, PbmPixel (..)
+, PgmPixel8 (..)
+, PgmPixel16 (..)
 , PPMHeader (..)
 , PpmPixelData (..)
+, pixelVectorToList
+, pixelDataToIntList
 , parsePPM
 , PpmParseResult
 -- TODO expose attoparsec functions in .Internal package
@@ -25,6 +30,7 @@ import           Control.Applicative
 import           Data.Attoparsec.ByteString as A
 import           Data.Attoparsec.ByteString.Char8 as A8
 import           Data.Attoparsec.Binary (anyWord16be)
+import           Data.Bits (testBit)
 import           Data.ByteString (ByteString)
 import           Data.Char (ord)
 import           Data.List (foldl')
@@ -33,8 +39,9 @@ import           Foreign.Storable.Record as Store
 import           Foreign.Storable (Storable (..))
 
 import qualified Data.Vector.Unboxed as U
+import           Data.Vector.Unboxed ((!))
 import qualified Data.Vector.Generic
-import qualified Data.Vector.Generic.Mutable
+import qualified Data.Vector.Generic.Mutable as VGM
 
 import Data.Vector.Unboxed.Deriving
 
@@ -79,9 +86,38 @@ data PpmPixelRGB16 = PpmPixelRGB16 {-# UNPACK #-} !Word16 -- Red
                                    {-# UNPACK #-} !Word16 -- Blue
                                    deriving (Eq, Show)
 
+-- | A pixel containing black or white.
+newtype PbmPixel = PbmPixel Bool -- False = black, True = white
+                 deriving (Eq, Show)
+
+-- | A pixel containing an 8-bit greyscale value.
+data PgmPixel8 = PgmPixel8 {-# UNPACK #-} !Word8
+                           deriving (Eq, Show)
+
+-- | A pixel containing a 16-bit greyscale value.
+data PgmPixel16 = PgmPixel16 {-# UNPACK #-} !Word16
+                             deriving (Eq, Show)
+
 -- | Image data, either 8 or 16 bits.
+-- TODO rename to PNM
 data PpmPixelData = PpmPixelDataRGB8 (U.Vector PpmPixelRGB8)   -- ^ For 8-bit PPMs.
                   | PpmPixelDataRGB16 (U.Vector PpmPixelRGB16) -- ^ For 16-bit PPMs.
+                  | PbmPixelData (U.Vector PbmPixel)           -- ^ For 1-bit PBMs.
+                  | PgmPixelData8 (U.Vector PgmPixel8)         -- ^ For 8-bit PGMs.
+                  | PgmPixelData16 (U.Vector PgmPixel16)       -- ^ For 16-bit PGMs.
+
+
+pixelVectorToList :: (U.Unbox a) => U.Vector a -> [a]
+pixelVectorToList = U.toList
+
+
+pixelDataToIntList :: PpmPixelData -> [Int]
+pixelDataToIntList d = case d of
+  PpmPixelDataRGB8 v  -> concat [ map fromIntegral [r, g, b] | PpmPixelRGB8 r g b  <- U.toList v ]
+  PpmPixelDataRGB16 v -> concat [ map fromIntegral [r, g, b] | PpmPixelRGB16 r g b <- U.toList v ]
+  PbmPixelData v      ->        [ if b then 1 else 0         | PbmPixel b          <- U.toList v ]
+  PgmPixelData8 v     ->        [ fromIntegral x             | PgmPixel8 x         <- U.toList v ]
+  PgmPixelData16 v    ->        [ fromIntegral x             | PgmPixel16 x        <- U.toList v ]
 
 
 -- * Unbox instance for pixels
@@ -96,34 +132,82 @@ derivingUnbox "PpmPixelRGB16"
     [| \ (PpmPixelRGB16 a b c) -> (a, b, c) |]
     [| \ (a, b, c) -> PpmPixelRGB16 a b c |]
 
+derivingUnbox "PbmPixel"
+    [t| PbmPixel -> Bool |]
+    [| \ (PbmPixel b) -> b |]
+    [| \ b -> PbmPixel b |]
+
+derivingUnbox "PgmPixel8"
+    [t| PgmPixel8 -> Word8 |]
+    [| \ (PgmPixel8 x) -> x |]
+    [| \ x -> PgmPixel8 x |]
+
+derivingUnbox "PgmPixel16"
+    [t| PgmPixel16 -> Word16 |]
+    [| \ (PgmPixel16 x) -> x |]
+    [| \ x -> PgmPixel16 x |]
+
 
 -- * Storable instance for pixels
 
-storePixel8 :: Store.Dictionary PpmPixelRGB8
-storePixel8 =
+storePpmPixel8 :: Store.Dictionary PpmPixelRGB8
+storePpmPixel8 =
   Store.run $ liftA3 PpmPixelRGB8
     (Store.element (\(PpmPixelRGB8 x _ _) -> x))
     (Store.element (\(PpmPixelRGB8 _ y _) -> y))
     (Store.element (\(PpmPixelRGB8 _ _ z) -> z))
 
-storePixel16 :: Store.Dictionary PpmPixelRGB16
-storePixel16 =
+storePpmPixel16 :: Store.Dictionary PpmPixelRGB16
+storePpmPixel16 =
   Store.run $ liftA3 PpmPixelRGB16
     (Store.element (\(PpmPixelRGB16 x _ _) -> x))
     (Store.element (\(PpmPixelRGB16 _ y _) -> y))
     (Store.element (\(PpmPixelRGB16 _ _ z) -> z))
 
+storePbmPixel :: Store.Dictionary PbmPixel
+storePbmPixel =
+  Store.run $ liftA PbmPixel
+    (Store.element (\(PbmPixel x) -> x))
+
+storePgmPixel8 :: Store.Dictionary PgmPixel8
+storePgmPixel8 =
+  Store.run $ liftA PgmPixel8
+    (Store.element (\(PgmPixel8 x) -> x))
+
+storePgmPixel16 :: Store.Dictionary PgmPixel16
+storePgmPixel16 =
+  Store.run $ liftA PgmPixel16
+    (Store.element (\(PgmPixel16 x) -> x))
+
 instance Storable PpmPixelRGB8 where
-  sizeOf = Store.sizeOf storePixel8
-  alignment = Store.alignment storePixel8
-  peek = Store.peek storePixel8
-  poke = Store.poke storePixel8
+  sizeOf = Store.sizeOf storePpmPixel8
+  alignment = Store.alignment storePpmPixel8
+  peek = Store.peek storePpmPixel8
+  poke = Store.poke storePpmPixel8
 
 instance Storable PpmPixelRGB16 where
-  sizeOf = Store.sizeOf storePixel16
-  alignment = Store.alignment storePixel16
-  peek = Store.peek storePixel16
-  poke = Store.poke storePixel16
+  sizeOf = Store.sizeOf storePpmPixel16
+  alignment = Store.alignment storePpmPixel16
+  peek = Store.peek storePpmPixel16
+  poke = Store.poke storePpmPixel16
+
+instance Storable PbmPixel where
+  sizeOf = Store.sizeOf storePbmPixel
+  alignment = Store.alignment storePbmPixel
+  peek = Store.peek storePbmPixel
+  poke = Store.poke storePbmPixel
+
+instance Storable PgmPixel8 where
+  sizeOf = Store.sizeOf storePgmPixel8
+  alignment = Store.alignment storePgmPixel8
+  peek = Store.peek storePgmPixel8
+  poke = Store.poke storePgmPixel8
+
+instance Storable PgmPixel16 where
+  sizeOf = Store.sizeOf storePgmPixel16
+  alignment = Store.alignment storePgmPixel16
+  peek = Store.peek storePgmPixel16
+  poke = Store.poke storePgmPixel16
 
 
 -- | Parses a netpbm magic number.
@@ -134,13 +218,61 @@ magicNumberParser = do
   case magic of
     "P1" -> return P1
     "P2" -> return P2
-
     "P3" -> return P3
     "P4" -> return P4
     "P5" -> return P5
     "P6" -> return P6
     _    -> fail $ "PPM: uknown PPM format " ++ show magic
 
+
+
+{-# INLINE comments #-}
+comments :: Parser ()
+comments = void $ many comment
+  where
+    comment = "#" .*> A.takeWhile isNotNewline <* endOfLine
+    isNotNewline w = w /= 10 && w /= 13
+
+-- | Decimal, possibly with comments interleaved,
+-- but starting and ending with a digit.
+-- See the notes about comments.
+{-# INLINE decimalC #-}
+decimalC :: Parser Int
+decimalC = foldl' shiftDecimalChar 0 <$> ((:) <$> digit <*> many (comments *> digit))
+  where
+    shiftDecimalChar a d = a * 10 + ord d - (48 :: Int)
+
+
+headerParser :: Parser PPMHeader
+headerParser = do
+  ppmType <- magicNumberParser
+  comments
+  skipSpace
+  comments
+  width <- decimalC
+  comments
+  skipSpace
+  comments
+  height <- decimalC
+  comments
+  return $ PPMHeader ppmType width height
+
+
+{-# INLINE word8max #-}
+-- Parsing words not bigger than given maxval
+word8max :: Word8 -> Parser Word8
+word8max m  = A.satisfy (<= m) <?> "pixel data must be smaller than maxval"
+
+{-# INLINE word16max #-}
+word16max :: Word16 -> Parser Word16
+word16max m = do w16 <- anyWord16be
+                 when (not $ w16 <= m) $ fail "pixel data must be smaller than maxval"
+                 return w16
+
+
+{-# INLINE isValidMaxval #-}
+isValidMaxval :: Int -> Bool
+isValidMaxval v = v > 0 && v < 65536
 
 
 -- | Parses a SINGLE PPM file.
@@ -157,26 +289,17 @@ magicNumberParser = do
 -- inside the magic number".
 --
 -- See also the notes for `imagesParser`.
-ppmParser :: Parser PPM
-ppmParser = do
-  ppmType <- magicNumberParser
-  -- TODO Implement the other netpbm image types
-  when (ppmType /= P6) $ error "haskell-netpbm currently only supports PPM P6"
-  comments
+ppmBodyParser :: PPMHeader -> Parser PPM
+ppmBodyParser header@PPMHeader { ppmWidth = width, ppmHeight = height } = do
+
   skipSpace
   comments
-  width <- decimalC
-  comments
-  skipSpace
-  comments
-  height <- decimalC
-  comments
-  skipSpace
-  comments
+
   maxColorVal <- decimalC
-  when (not $ isValidColorVal maxColorVal) $
+  when (not $ isValidMaxval maxColorVal) $
     fail $ "PPM: invalid color maxval " ++ show maxColorVal
   comments
+
   _ <- A8.satisfy isSpace -- obligatory SINGLE whitespace
   -- Starting from here, comments are not allowed any more
   raster <- case maxColorVal of -- 1 or 2 bytes per pixel
@@ -186,25 +309,59 @@ ppmParser = do
     m | otherwise -> let v = word16max (fromIntegral m)
                       in PpmPixelDataRGB16 <$> U.replicateM (height * width) (PpmPixelRGB16 <$> v <*> v <*> v)
 
-  return $ PPM (PPMHeader ppmType width height) raster
+  return $ PPM header raster
 
+
+pbmBodyParser :: PPMHeader -> Parser PPM
+pbmBodyParser header@PPMHeader { ppmWidth = width, ppmHeight = height } = do
+
+  _ <- A8.satisfy isSpace -- obligatory SINGLE whitespace
+  -- Starting from here, comments are not allowed any more
+
+  -- From: http://netpbm.sourceforge.net/doc/pbm.html
+  --   "Each row is Width bits, packed 8 to a byte, with don't care bits to fill out the last byte in the row."
+  let widthBytes = (width + 7) // 8
+
+  -- Parse pixel data first in into a Word8 vector, then translate to a Bool vector, leaving the don't-cares at the end out.
+  word8Vector <- U.replicateM (height * widthBytes) anyWord8
+
+  let bits = U.create $ do
+        v <- VGM.replicate (width * height) (PbmPixel False)
+        forM_ [0..height-1] $ \row ->
+          forM_ [0..width-1] $ \col ->
+            let i            = row * width + col
+                (col8, bitN) = col /% 8
+                i8           = row * widthBytes + col8
+             -- We negate (see "not"), because:
+             --   "1 is black, 0 is white."
+             -- Also, `testBit` indexes from the right (LSB).
+             in VGM.write v i (PbmPixel . not $ (word8Vector ! i8) `testBit` (7 - bitN))
+        return v
+
+  return $ PPM header (PbmPixelData bits)
   where
-    isValidColorVal v = v > 0 && v < 65536
-    comments = void $ many comment
-    comment = "#" .*> A.takeWhile isNotNewline <* endOfLine
-    isNotNewline w = w /= 10 && w /= 13
-    -- Decimal, possibly with comments interleaved,
-    -- but starting and ending with a digit.
-    -- See the notes about comments above.
-    decimalC :: Parser Int
-    decimalC = foldl' shiftDecimalChar 0 <$> ((:) <$> digit <*> many (comments *> digit))
-    shiftDecimalChar a d = a * 10 + ord d - (48 :: Int)
+    (//) = quot
+    (/%) = quotRem
 
-    -- Parsing words not bigger than given maxval
-    word8max m  = A.satisfy (<= m) <?> "pixel data must be smaller than maxval"
-    word16max m = do w16 <- anyWord16be
-                     when (not $ w16 <= m) $ fail "pixel data must be smaller than maxval"
-                     return w16
+
+imageParserOfType :: Maybe PPMType -> Parser PPM
+imageParserOfType mpN = do
+  header@PPMHeader { ppmType } <- headerParser
+
+  case mpN of
+    Just pN | pN /= ppmType -> fail "an image in a multi-image file is not of the same type as the first image in the file"
+    _                       -> return ()
+
+  case ppmType of
+    P4 -> pbmBodyParser header
+    P6 -> ppmBodyParser header
+    -- TODO implement the other types
+    p  -> fail $ "haskell-netpbm error: " ++ show p ++ " images is not yet supported"
+
+
+imageParser :: Parser PPM
+imageParser = imageParserOfType Nothing
+
 
 -- | Parses a full PPM file, containing one or more images.
 --
@@ -216,7 +373,13 @@ ppmParser = do
 --
 -- However, you can find PPM files that have trailing whitespace, especially a '\n'.
 imagesParser :: Parser [PPM]
-imagesParser = many1 (ppmParser <* skipSpace)
+imagesParser = do
+  -- Parse the first image.
+  firstImage@PPM { ppmHeader = PPMHeader { ppmType } } <- imageParser <* skipSpace
+  -- Force the following images, if any, to be of the same type.
+  otherImages <- many (imageParserOfType (Just ppmType) <* skipSpace)
+  return $ firstImage:otherImages
+
 
 
 -- | The result of a PPM parse.
