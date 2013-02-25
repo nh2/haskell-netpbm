@@ -261,7 +261,7 @@ headerParser = do
 {-# INLINE word8max #-}
 -- Parsing words not bigger than given maxval
 word8max :: Word8 -> Parser Word8
-word8max m  = A.satisfy (<= m) <?> "pixel data must be smaller than maxval"
+word8max m = A.satisfy (<= m) <?> "pixel data must be smaller than maxval"
 
 {-# INLINE word16max #-}
 word16max :: Word16 -> Parser Word16

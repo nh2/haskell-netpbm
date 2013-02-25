@@ -35,6 +35,11 @@ repcat :: Int -> [a] -> [a]
 repcat n = concat . replicate n
 
 
+checkDirectory :: FilePath -> String -> PPMType -> [(String, (Int, Int))] -> Spec
+checkDirectory dir desc typ filesWithSizes = forM_ filesWithSizes $ \(f, size) ->
+  parseTestFile (dir ++ f) desc $ checkSinglePPM typ size
+
+
 main :: IO ()
 main = hspec $ do
   describe "P6 PPM (color binary)" $ do
@@ -52,7 +57,7 @@ main = hspec $ do
       checkSinglePPM P6 (227,149)
 
     describe "more test files from the internet" $ do
-      forM_
+      checkDirectory "internet/set1/" "from the internet" P6
         [ ("boxes_1.ppm", (63,63))
         , ("boxes_2.ppm", (63,63))
         , ("house_1.ppm", (111,132))
@@ -69,9 +74,7 @@ main = hspec $ do
         , ("tree_2.ppm", (133,133))
         , ("west_1.ppm", (366,216))
         , ("west_2.ppm", (366,216))
-        ] $ \(f, size) ->
-          parseTestFile ("internet/set1/" ++ f) "from the internet" $
-            checkSinglePPM P6 size
+        ]
 
 
     parseTestFile "gitlogo-double.ppm" "a multi-image file" $ do
@@ -151,6 +154,9 @@ main = hspec $ do
           Right r                                 -> assertFailure $ "parsed unexpected: " ++ show r
           Left e                                  -> assertFailure $ "did not parse: " ++ e
 
+      -- TODO try to get a 16-bit image out of convert
+
+      -- TODO try to get a 16-bit image out of the new gimp
 
     describe "negative examples" $ do
 
