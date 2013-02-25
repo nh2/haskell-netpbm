@@ -75,6 +75,18 @@ main = hspec $ do
         , ("west_1.ppm", (366,216))
         , ("west_2.ppm", (366,216))
         ]
+      checkDirectory "internet/set3/" "from the internet, PNM" P6
+        [ ("birch.pnm", (128,128))
+        , ("cotton.pnm", (256,170))
+        , ("oak.pnm", (128,128))
+        , ("quilt.pnm", (256,237))
+        ]
+
+      parseTestFile "internet/set2/mandrill.ppm" "the color file from the 'Math 625' course" $
+        checkSinglePPM P6 (512,512)
+
+      parseTestFile "internet/set2/half.ppm" "the color file from the 'Math 625' course, half width" $
+        checkSinglePPM P6 (256,512)
 
 
     parseTestFile "gitlogo-double.ppm" "a multi-image file" $ do
@@ -173,6 +185,11 @@ main = hspec $ do
       parseTestFile "bad/gitlogo-comment-without-following-extra-newline-before-data-block.ppm" "no non-comment whitespace before data block" shouldNotParse
 
       parseTestFile "bad/gitlogo-value-bigger-than-maxval.ppm" "subpixel value is bigger than maxval" shouldNotParse
+
+      parseTestFile "internet/set3/cathedral.pnm" "subpixel value is bigger than maxval" shouldNotParse
+      parseTestFile "internet/set3/checkers.pnm"  "subpixel value is bigger than maxval" shouldNotParse
+      parseTestFile "internet/set3/fish_tile.pnm" "subpixel value is bigger than maxval" shouldNotParse
+      parseTestFile "internet/set3/garnet.pnm"    "subpixel value is bigger than maxval" shouldNotParse
 
 
   describe "P4 PBM (bitmap binary)" $ do
