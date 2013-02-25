@@ -192,6 +192,20 @@ main = hspec $ do
       parseTestFile "internet/set3/garnet.pnm"    "subpixel value is bigger than maxval" shouldNotParse
 
 
+  describe "P5 PGM (greyscale binary)" $ do
+
+    parseTestFile "internet/set2/mandrill.pgm" "the color file from the 'Math 625' course" $
+      checkSinglePPM P5 (512,512)
+
+    parseTestFile "internet/set2/half.pgm" "the color file from the 'Math 625' course, half width" $
+      checkSinglePPM P5 (256,512)
+
+    describe "comments" $ do
+
+      parseTestFile "internet/set2/comments.pgm" "the color file from the 'Math 625' course, with comments" $
+        checkSinglePPM P5 (512,512)
+
+
   describe "P4 PBM (bitmap binary)" $ do
 
     parseTestFile "testgrid.pbm" "the bitmap file from the netpbm test suite" $

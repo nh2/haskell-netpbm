@@ -6,7 +6,7 @@
 --
 -- To parse one of these formats, use `parsePPM`.
 --
--- Currently, only P4 and P6 images are implemented.
+-- Currently, only P4, P5 and P6 images are implemented.
 -- Implementing the other types should be straighforward.
 module Graphics.Netpbm (
   PPMType (..)
@@ -312,6 +312,29 @@ ppmBodyParser header@PPMHeader { ppmWidth = width, ppmHeight = height } = do
   return $ PPM header raster
 
 
+pgmBodyParser :: PPMHeader -> Parser PPM
+pgmBodyParser header@PPMHeader { ppmWidth = width, ppmHeight = height } = do
+
+  skipSpace
+  comments
+
+  maxGreyVal <- decimalC
+  when (not $ isValidMaxval maxGreyVal) $
+    fail $ "PPM: invalid color maxval " ++ show maxGreyVal
+  comments
+
+  _ <- A8.satisfy isSpace -- obligatory SINGLE whitespace
+  -- Starting from here, comments are not allowed any more
+  raster <- case maxGreyVal of -- 1 or 2 bytes per pixel
+    -- Parse pixel data into vector, making sure that words don't exceed maxGreyVal
+    m | m < 256   -> let v = word8max (fromIntegral m)
+                      in PgmPixelData8  <$> U.replicateM (height * width) (PgmPixel8  <$> v)
+    m | otherwise -> let v = word16max (fromIntegral m)
+                      in PgmPixelData16 <$> U.replicateM (height * width) (PgmPixel16 <$> v)
+
+  return $ PPM header raster
+
+
 pbmBodyParser :: PPMHeader -> Parser PPM
 pbmBodyParser header@PPMHeader { ppmWidth = width, ppmHeight = height } = do
 
@@ -354,6 +377,7 @@ imageParserOfType mpN = do
 
   case ppmType of
     P4 -> pbmBodyParser header
+    P5 -> pgmBodyParser header
     P6 -> ppmBodyParser header
     -- TODO implement the other types
     p  -> fail $ "haskell-netpbm error: " ++ show p ++ " images is not yet supported"
