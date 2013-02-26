@@ -226,19 +226,29 @@ magicNumberParser = do
 
 
 
-{-# INLINE comments #-}
-comments :: Parser ()
-comments = void $ many comment
+-- Not writing this as @comments = skipMany comment@ because that would allow this parser
+-- to consume no input, which makes it loop forever when stuck into something like `many`.
+{-# INLINE comment #-}
+comment :: Parser ByteString
+comment = "#" .*> A.takeWhile isNotNewline <* endOfLine
   where
-    comment = "#" .*> A.takeWhile isNotNewline <* endOfLine
     isNotNewline w = w /= 10 && w /= 13
+
+
+{-# INLINE sep #-}
+sep :: Parser ()
+-- At least one space, optionally with more space or comments around
+sep = do skipMany comment
+         singleWhitespace
+         skipMany (singleWhitespace <|> void comment)
+
 
 -- | Decimal, possibly with comments interleaved,
 -- but starting and ending with a digit.
 -- See the notes about comments.
 {-# INLINE decimalC #-}
 decimalC :: Parser Int
-decimalC = foldl' shiftDecimalChar 0 <$> ((:) <$> digit <*> many (comments *> digit))
+decimalC = foldl' shiftDecimalChar 0 <$> (digit `sepBy1` skipMany comment)
   where
     shiftDecimalChar a d = a * 10 + ord d - (48 :: Int)
 
@@ -246,15 +256,11 @@ decimalC = foldl' shiftDecimalChar 0 <$> ((:) <$> digit <*> many (comments *> di
 headerParser :: Parser PPMHeader
 headerParser = do
   ppmType <- magicNumberParser
-  comments
-  skipSpace
-  comments
+  sep
   width <- decimalC
-  comments
-  skipSpace
-  comments
+  sep
   height <- decimalC
-  comments
+  skipMany comment -- Don't allow whitespace here since after the next whitespace there must not be any more comments
   return $ PPMHeader ppmType width height
 
 
@@ -275,6 +281,11 @@ isValidMaxval :: Int -> Bool
 isValidMaxval v = v > 0 && v < 65536
 
 
+{-# INLINE singleWhitespace #-}
+singleWhitespace :: Parser ()
+singleWhitespace = void $ A.satisfy isSpace_w8
+
+
 -- | Parses a SINGLE PPM file.
 --
 -- Specification: http://netpbm.sourceforge.net/doc/ppm.html
@@ -292,16 +303,15 @@ isValidMaxval v = v > 0 && v < 65536
 ppmBodyParser :: PPMHeader -> Parser PPM
 ppmBodyParser header@PPMHeader { ppmWidth = width, ppmHeight = height } = do
 
-  skipSpace
-  comments
+  sep
 
   maxColorVal <- decimalC
   when (not $ isValidMaxval maxColorVal) $
     fail $ "PPM: invalid color maxval " ++ show maxColorVal
-  comments
+  skipMany comment
 
-  _ <- A8.satisfy isSpace -- obligatory SINGLE whitespace
-  -- Starting from here, comments are not allowed any more
+  singleWhitespace -- obligatory SINGLE whitespace; starting from here, comments are not allowed any more
+
   raster <- case maxColorVal of -- 1 or 2 bytes per pixel
     -- Parse pixel data into vector, making sure that words don't exceed maxColorVal
     m | m < 256   -> let v = word8max (fromIntegral m)
@@ -315,16 +325,15 @@ ppmBodyParser header@PPMHeader { ppmWidth = width, ppmHeight = height } = do
 pgmBodyParser :: PPMHeader -> Parser PPM
 pgmBodyParser header@PPMHeader { ppmWidth = width, ppmHeight = height } = do
 
-  skipSpace
-  comments
+  sep
 
   maxGreyVal <- decimalC
   when (not $ isValidMaxval maxGreyVal) $
     fail $ "PPM: invalid color maxval " ++ show maxGreyVal
-  comments
+  skipMany comment
 
-  _ <- A8.satisfy isSpace -- obligatory SINGLE whitespace
-  -- Starting from here, comments are not allowed any more
+  singleWhitespace -- obligatory SINGLE whitespace; starting from here, comments are not allowed any more
+
   raster <- case maxGreyVal of -- 1 or 2 bytes per pixel
     -- Parse pixel data into vector, making sure that words don't exceed maxGreyVal
     m | m < 256   -> let v = word8max (fromIntegral m)
@@ -338,8 +347,7 @@ pgmBodyParser header@PPMHeader { ppmWidth = width, ppmHeight = height } = do
 pbmBodyParser :: PPMHeader -> Parser PPM
 pbmBodyParser header@PPMHeader { ppmWidth = width, ppmHeight = height } = do
 
-  _ <- A8.satisfy isSpace -- obligatory SINGLE whitespace
-  -- Starting from here, comments are not allowed any more
+  singleWhitespace -- obligatory SINGLE whitespace; starting from here, comments are not allowed any more
 
   -- From: http://netpbm.sourceforge.net/doc/pbm.html
   --   "Each row is Width bits, packed 8 to a byte, with don't care bits to fill out the last byte in the row."
