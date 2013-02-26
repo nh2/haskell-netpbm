@@ -224,3 +224,55 @@ main = hspec $ do
     parseTestFile "testgrid.pbm" "the bitmap file from the netpbm test suite" $
       checkSinglePPMdata P4 (14,16) (repcat 8 (repcat 7 [0,1] ++ replicate 14 0))
 
+
+  -- describe "P3 PPM (bitmap ASCII)" $ do
+
+  --   describe "more test files from the internet" $ do
+  --     forM_
+  --       [ ("feep.ppm", (4,4))
+  --       , ("snail.ppm", (256,256))
+  --       ] $ \(f, size) ->
+  --         parseTestFile ("internet/set3/" ++ f) "from the internet" $
+  --           checkSinglePPM P3 size
+
+
+  -- describe "P2 PGM (bitmap ASCII)" $ do
+
+  --   describe "more test files from the internet" $ do
+  --     forM_
+  --       [ ("balloons.pgm", (640,480))
+  --       , ("columns.pgm", (640,480))
+  --       , ("feep.pgm", (24,7))
+  --       , ("tracks.pgm", (300,200))
+  --       ] $ \(f, size) ->
+  --         parseTestFile ("internet/set3/" ++ f) "from the internet" $
+  --           checkSinglePPM P2 size
+
+
+  describe "P1 PBM (bitmap ASCII)" $ do
+
+    describe "more test files from the internet" $ do
+      checkDirectory "internet/set3/" "from the internet" P1
+        [ ("circle_ascii.pbm", (200,200))
+        , ("feep.pbm", (24,7))
+        ]
+
+    let pbmFromSpecResult = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1
+                            ,1,0,0,0,0,1,1,0,0,0,0,1,1,0,0,0,0,1,1,0,0,0,0,1
+                            ,1,0,1,1,1,1,1,0,1,1,1,1,1,0,1,1,1,1,1,0,1,1,0,1
+                            ,1,0,0,0,1,1,1,0,0,0,1,1,1,0,0,0,1,1,1,0,0,0,0,1
+                            ,1,0,1,1,1,1,1,0,1,1,1,1,1,0,1,1,1,1,1,0,1,1,1,1
+                            ,1,0,1,1,1,1,1,0,0,0,0,1,1,0,0,0,0,1,1,0,1,1,1,1
+                            ,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+
+    parseTestFile "pbm-plain-from-spec.pbm" "the plain PBM file from the spec example" $
+      checkSinglePPMdata P1 (24,7) pbmFromSpecResult
+
+
+    describe "ASCII files should only contain one image" $ do
+
+      parseTestFile "pbm-plain-from-spec-multiple-but-treated-as-junk.pbm" "ASCII PBM from spec, multiple times, rest should be treated as junk" $
+        checkSinglePPMdata P1 (24,7) pbmFromSpecResult
+
+      parseTestFile "bad/pbm-plain-from-spec-multiple-no-space-before-junk.pbm" "ASCII PBM from spec, multiple times, rest should be treated as junk" $
+        shouldNotParse

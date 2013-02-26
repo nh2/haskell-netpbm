@@ -6,7 +6,7 @@
 --
 -- To parse one of these formats, use `parsePPM`.
 --
--- Currently, only P4, P5 and P6 images are implemented.
+-- Currently, only P1, P4, P5 and P6 images are implemented.
 -- Implementing the other types should be straighforward.
 module Graphics.Netpbm (
   PPMType (..)
@@ -32,7 +32,7 @@ import           Data.Attoparsec.ByteString.Char8 as A8
 import           Data.Attoparsec.Binary (anyWord16be)
 import           Data.Bits (testBit)
 import           Data.ByteString (ByteString)
-import           Data.Char (ord)
+import           Data.Char (chr, ord)
 import           Data.List (foldl')
 import           Data.Word (Word8, Word16)
 import           Foreign.Storable.Record as Store
@@ -375,6 +375,41 @@ pbmBodyParser header@PPMHeader { ppmWidth = width, ppmHeight = height } = do
     (/%) = quotRem
 
 
+-- | See http://netpbm.sourceforge.net/doc/pbm.html
+--
+-- We ignore the "No line should be longer than 70 characters" here due to "should".
+pbmAsciiBodyParser :: PPMHeader -> Parser PPM
+pbmAsciiBodyParser header@PPMHeader { ppmWidth = width, ppmHeight = height } = do
+
+  singleWhitespace -- obligatory SINGLE whitespace; starting from here, comments are not allowed any more
+
+  -- Parse pixel data into Bool vector.
+  let n = height * width
+  -- There must be whitespace *between* the values.
+  -- There can be whitespace *before* the first value since:
+  --   "White space in the raster section is ignored."
+  -- Don't allow it *after* so that we can check if there is a whitespace between raster and optional junk.
+  -- I use `generateM` here instead of fromList . (`sepBy` [whitespace]) because I believe it's faster.
+  bits <- U.replicateM n (A.takeWhile isSpace_w8 *> asciiBit)
+
+  -- From the spec (who the heck can even come up with this):
+  --   "You can put any junk you want after the raster, if it starts with a white space character."
+  -- Note that it says *can*, i.e. the junk can also be empty, so trailing whitespace is allowed.
+  -- So let's eat all remaining input:
+  option () (A.takeWhile1 isSpace_w8 *> takeLazyByteString *> pure ())
+
+  -- Now we should be at the end of file.
+  endOfInput <?> "there is junk after the ASCII raster that is not separated by whitespace"
+
+  return $ PPM header (PbmPixelData bits)
+  where
+    asciiBit = PbmPixel <$> (anyWord8 >>= toBool)
+    -- We flip True/False because "1" means black == False.
+    toBool 48 = return True
+    toBool 49 = return False
+    toBool w  = fail $ "ASCII bit must be '0' or '1', not " ++ show (chr $ fromIntegral w)
+
+
 imageParserOfType :: Maybe PPMType -> Parser PPM
 imageParserOfType mpN = do
   header@PPMHeader { ppmType } <- headerParser
@@ -384,6 +419,7 @@ imageParserOfType mpN = do
     _                       -> return ()
 
   case ppmType of
+    P1 -> pbmAsciiBodyParser header
     P4 -> pbmBodyParser header
     P5 -> pgmBodyParser header
     P6 -> ppmBodyParser header
@@ -408,8 +444,14 @@ imagesParser :: Parser [PPM]
 imagesParser = do
   -- Parse the first image.
   firstImage@PPM { ppmHeader = PPMHeader { ppmType } } <- imageParser <* skipSpace
+
   -- Force the following images, if any, to be of the same type.
   otherImages <- many (imageParserOfType (Just ppmType) <* skipSpace)
+
+  -- TODO Restructure so that this cannot happen. There is no point of returning [PPM] for ASCII images.
+  when (ppmType `elem` [P1, P2, P3] && not (null otherImages)) $
+    error "haskell-netpbm bug: ASCII formats should never contain more than one image (they treat remaining data as junk)"
+
   return $ firstImage:otherImages
 
 
