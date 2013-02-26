@@ -16,6 +16,16 @@ checkSinglePPM typ size parseResult = case parseResult of
   Left e                                               -> assertFailure $ "image parse failed: " ++ e
 
 
+checkSinglePPMdata :: PPMType -> (Int, Int) -> [Int] -> PpmParseResult -> Assertion
+checkSinglePPMdata typ size expected parseResult = case parseResult of
+  Right ([PPM { ppmHeader = PPMHeader { ppmType, ppmWidth, ppmHeight }
+              , ppmData }], rest) -> do
+                                        (ppmType, (ppmWidth, ppmHeight), rest) `shouldBe` (typ, size, Nothing)
+                                        pixelDataToIntList ppmData `shouldBe` expected
+  Right (ppms, _)                 -> assertFailure $ "expected only one image, but got " ++ show (length ppms)
+  Left e                          -> assertFailure $ "image parse failed: " ++ e
+
+
 shouldNotParse :: PpmParseResult -> Assertion
 shouldNotParse res = case res of
   Left _ -> return ()
@@ -35,6 +45,7 @@ repcat :: Int -> [a] -> [a]
 repcat n = concat . replicate n
 
 
+-- @dir@ must have trailing slash.
 checkDirectory :: FilePath -> String -> PPMType -> [(String, (Int, Int))] -> Spec
 checkDirectory dir desc typ filesWithSizes = forM_ filesWithSizes $ \(f, size) ->
   parseTestFile (dir ++ f) desc $ checkSinglePPM typ size
@@ -211,10 +222,5 @@ main = hspec $ do
   describe "P4 PBM (bitmap binary)" $ do
 
     parseTestFile "testgrid.pbm" "the bitmap file from the netpbm test suite" $
-      \res -> case res of
-        Right ([PPM { ppmData }], Nothing) -> do checkSinglePPM P4 (14,16) res
-                                                 let expected = repcat 8 (repcat 7 [0,1] ++ replicate 14 0) :: [Int]
-                                                 pixelDataToIntList ppmData `shouldBe` expected
-        Right r                            -> assertFailure $ "parsed unexpected: " ++ show r
-        Left e                             -> assertFailure $ "did not parse: " ++ e
+      checkSinglePPMdata P4 (14,16) (repcat 8 (repcat 7 [0,1] ++ replicate 14 0))
 
