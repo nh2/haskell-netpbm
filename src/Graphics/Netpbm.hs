@@ -8,6 +8,8 @@
 --
 -- Currently, only P1, P4, P5 and P6 images are implemented.
 -- Implementing the other types should be straighforward.
+--
+-- See also: http://www.imagemagick.org/Usage/formats/#netpbm
 module Graphics.Netpbm (
   PPMType (..)
 , PPM (..)
