@@ -247,28 +247,20 @@ main = hspec $ do
       checkSinglePPM P4 (256,256)
 
 
-  -- describe "P3 PPM (bitmap ASCII)" $ do
+  -- describe "P3 PPM (color ASCII)" $ do
 
-  --   describe "more test files from the internet" $ do
-  --     forM_
-  --       [ ("feep.ppm", (4,4))
-  --       , ("snail.ppm", (256,256))
-  --       ] $ \(f, size) ->
-  --         parseTestFile ("internet/set3/" ++ f) "from the internet" $
-  --           checkSinglePPM P3 size
+  --   checkDirectory "internet/set3/" "more test files from the internet" P3
+  --     [ ("feep.ppm", (4,4))
+  --     , ("snail.ppm", (256,256))
+  --     ]
 
+  --   parseTestFile "SIPI-convert-plain.ppm" "a file produced by convert" $
+  --     -- convert SIPI.tiff -compress none SIPI-convert-plain.ppm
+  --     checkSinglePPM P3 (256,256)
 
-  -- describe "P2 PGM (bitmap ASCII)" $ do
-
-  --   describe "more test files from the internet" $ do
-  --     forM_
-  --       [ ("balloons.pgm", (640,480))
-  --       , ("columns.pgm", (640,480))
-  --       , ("feep.pgm", (24,7))
-  --       , ("tracks.pgm", (300,200))
-  --       ] $ \(f, size) ->
-  --         parseTestFile ("internet/set3/" ++ f) "from the internet" $
-  --           checkSinglePPM P2 size
+  --     parseTestFile "SIPI-convert-plain-16.ppm" "a file produced by convert, 16-bit" $
+  --       -- convert SIPI.tiff -compress none -depth 16 SIPI-convert-plain-16.ppm
+  --       checkSinglePPM P3 (256,256)
 
 
   describe "P1 PBM (bitmap ASCII)" $ do
