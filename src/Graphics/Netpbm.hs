@@ -8,7 +8,7 @@
 --
 -- To parse one of these formats, use `parsePPM`.
 --
--- See also: http://www.imagemagick.org/Usage/formats/#netpbm
+-- See also: <http://www.imagemagick.org/Usage/formats/#netpbm>
 module Graphics.Netpbm (
   PPMType (..)
 , PPM (..)
@@ -492,13 +492,13 @@ imageParser = imageParserOfType Nothing
 
 -- | Parses a full PPM file, containing one or more images.
 --
--- "A PPM file consists of a sequence of one or more PPM images."
--- We allow trailing whitespace after images, which is AGAINST THE SPEC:
+-- From the spec:
 --
 -- >"A PPM file consists of a sequence of one or more PPM images.
 -- > There are no data, delimiters, or padding before, after, or between images."
 --
--- However, you can find PPM files that have trailing whitespace, especially a '\n'.
+-- However, you can find PPM files that have trailing whitespace, especially a '\n',
+-- so we allow this.
 imagesParser :: Parser [PPM]
 imagesParser = do
   -- Parse the first image.
