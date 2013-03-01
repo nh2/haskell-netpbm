@@ -329,7 +329,7 @@ pgmBodyParser header@PPMHeader { ppmWidth = width, ppmHeight = height } = do
 
   maxGreyVal <- decimalC
   when (not $ isValidMaxval maxGreyVal) $
-    fail $ "PPM: invalid color maxval " ++ show maxGreyVal
+    fail $ "PGM: invalid color maxval " ++ show maxGreyVal
   skipMany comment
 
   singleWhitespace -- obligatory SINGLE whitespace; starting from here, comments are not allowed any more
