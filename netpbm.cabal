@@ -12,7 +12,12 @@ cabal-version: >= 1.10
 homepage:      https://github.com/nh2/haskell-netpbm
 bug-Reports:   https://github.com/nh2/haskell-netpbm/issues
 synopsis:      Loading PBM, PGM, PPM image files
-description:   This package contains pure Haskell parsers for the netpbm image formats: PBM, PGM and PPM, for both ASCII and binary encodings.
+description:
+  This package contains pure Haskell parsers for the netpbm image formats: PBM, PGM and PPM, for both ASCII and binary encodings.
+  .
+  All netpbm image formats are implemented (P1 - P6).
+  .
+  The current implementation parses PPM images at around 10 MB/s on a Core i5-2520M.
 
 
 source-repository head
