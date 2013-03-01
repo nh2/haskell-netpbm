@@ -99,6 +99,10 @@ main = hspec $ do
       parseTestFile "internet/set2/half.ppm" "the color file from the 'Math 625' course, half width" $
         checkSinglePPM P6 (256,512)
 
+      parseTestFile "SIPI.ppm" "SIPI test file" $
+        -- convert SIPI.tiff SIPI.ppm
+        checkSinglePPM P6 (256,256)
+
 
     parseTestFile "gitlogo-double.ppm" "a multi-image file" $ do
       \res -> case res of
@@ -177,7 +181,9 @@ main = hspec $ do
           Right r                                 -> assertFailure $ "parsed unexpected: " ++ show r
           Left e                                  -> assertFailure $ "did not parse: " ++ e
 
-      -- TODO try to get a 16-bit image out of convert
+      parseTestFile "SIPI-16.ppm" "SIPI test file" $
+        -- convert SIPI.tiff -depth 16 SIPI-16.ppm
+        checkSinglePPM P6 (256,256)
 
       -- TODO try to get a 16-bit image out of the new gimp
 
@@ -213,16 +219,32 @@ main = hspec $ do
     parseTestFile "internet/set2/half.pgm" "the color file from the 'Math 625' course, half width" $
       checkSinglePPM P5 (256,512)
 
+    parseTestFile "SIPI-convert.pgm" "a file produced by convert" $
+      -- convert SIPI.tiff SIPI-convert.pgm
+      checkSinglePPM P5 (256,256)
+
+
     describe "comments" $ do
 
       parseTestFile "internet/set2/comments.pgm" "the color file from the 'Math 625' course, with comments" $
         checkSinglePPM P5 (512,512)
 
 
+    describe "16-bit" $ do
+
+      parseTestFile "SIPI-convert-16.pgm" "a file produced by convert, 16-bit" $
+        -- convert SIPI.tiff -depth 16 SIPI-convert-16.pgm
+        checkSinglePPM P5 (256,256)
+
+
   describe "P4 PBM (bitmap binary)" $ do
 
     parseTestFile "testgrid.pbm" "the bitmap file from the netpbm test suite" $
       checkSinglePPMdata P4 (14,16) (repcat 8 (repcat 7 [0,1] ++ replicate 14 0))
+
+    parseTestFile "SIPI-convert.pbm" "a file produced by convert" $
+      -- convert SIPI.tiff SIPI-convert.pbm
+      checkSinglePPM P4 (256,256)
 
 
   -- describe "P3 PPM (bitmap ASCII)" $ do
@@ -270,6 +292,9 @@ main = hspec $ do
         shouldNotParse
 
 
+    parseTestFile "SIPI-convert-plain.pbm" "a file produced by convert" $
+      -- convert SIPI.tiff -compress none SIPI-convert-plain.pbm
+      checkSinglePPM P1 (256,256)
 
 -- Some result data
 
