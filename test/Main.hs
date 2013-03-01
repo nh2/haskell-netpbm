@@ -58,7 +58,7 @@ main = hspec $ do
     parseTestFile "gimp.ppm" "a file produced by GIMP" $
       checkSinglePPM P6 (640,400)
 
-    parseTestFile "gitlogo.ppm" "a file produced convert" $
+    parseTestFile "gitlogo.ppm" "a file produced by convert" $
       checkSinglePPM P6 (220,92)
 
     parseTestFile "image.ppm" "some random file from the internet" $
@@ -257,14 +257,6 @@ main = hspec $ do
         , ("feep.pbm", (24,7))
         ]
 
-    let pbmFromSpecResult = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1
-                            ,1,0,0,0,0,1,1,0,0,0,0,1,1,0,0,0,0,1,1,0,0,0,0,1
-                            ,1,0,1,1,1,1,1,0,1,1,1,1,1,0,1,1,1,1,1,0,1,1,0,1
-                            ,1,0,0,0,1,1,1,0,0,0,1,1,1,0,0,0,1,1,1,0,0,0,0,1
-                            ,1,0,1,1,1,1,1,0,1,1,1,1,1,0,1,1,1,1,1,0,1,1,1,1
-                            ,1,0,1,1,1,1,1,0,0,0,0,1,1,0,0,0,0,1,1,0,1,1,1,1
-                            ,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
-
     parseTestFile "pbm-plain-from-spec.pbm" "the plain PBM file from the spec example" $
       checkSinglePPMdata P1 (24,7) pbmFromSpecResult
 
@@ -276,3 +268,17 @@ main = hspec $ do
 
       parseTestFile "bad/pbm-plain-from-spec-multiple-no-space-before-junk.pbm" "ASCII PBM from spec, multiple times, rest should be treated as junk" $
         shouldNotParse
+
+
+
+-- Some result data
+
+-- Note that in a PBM file, "1" means black, but in the result 0 means black.
+pbmFromSpecResult :: [Int]
+pbmFromSpecResult = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1
+                    ,1,0,0,0,0,1,1,0,0,0,0,1,1,0,0,0,0,1,1,0,0,0,0,1
+                    ,1,0,1,1,1,1,1,0,1,1,1,1,1,0,1,1,1,1,1,0,1,1,0,1
+                    ,1,0,0,0,1,1,1,0,0,0,1,1,1,0,0,0,1,1,1,0,0,0,0,1
+                    ,1,0,1,1,1,1,1,0,1,1,1,1,1,0,1,1,1,1,1,0,1,1,1,1
+                    ,1,0,1,1,1,1,1,0,0,0,0,1,1,0,0,0,0,1,1,0,1,1,1,1
+                    ,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
