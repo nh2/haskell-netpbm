@@ -263,6 +263,30 @@ main = hspec $ do
   --       checkSinglePPM P3 (256,256)
 
 
+  describe "P2 PGM (greyscale ASCII)" $ do
+
+    checkDirectory "internet/set3/" "more test files from the internet" P2
+      [ ("balloons.pgm", (640,480))
+      , ("columns.pgm", (640,480))
+      , ("feep.pgm", (24,7))
+      , ("tracks.pgm", (300,200))
+      ]
+
+    parseTestFile "pgm-plain-made-up-from-pbm-spec.pgm" "the plain PBM file from the spec example, converted to PGM" $
+      -- Invert 0/1 because in PBM 1 is black, not so in PGM
+      checkSinglePPMdata P2 (24,7) (map (1 -) pbmFromSpecResult)
+
+    parseTestFile "SIPI-convert-plain.pgm" "a file produced by convert" $
+      -- convert SIPI.tiff -compress none SIPI-convert-plain.pgm
+      checkSinglePPM P2 (256,256)
+
+    describe "16-bit" $ do
+
+      parseTestFile "SIPI-convert-plain-16.pgm" "a file produced by convert, 16-bit" $
+        -- convert SIPI.tiff -compress none -depth 16 SIPI-convert-plain-16.pgm
+        checkSinglePPM P2 (256,256)
+
+
   describe "P1 PBM (bitmap ASCII)" $ do
 
     describe "more test files from the internet" $ do

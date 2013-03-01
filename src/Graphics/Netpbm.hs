@@ -6,7 +6,7 @@
 --
 -- To parse one of these formats, use `parsePPM`.
 --
--- Currently, only P1, P4, P5 and P6 images are implemented.
+-- Currently, only P1, P2, P4, P5 and P6 images are implemented.
 -- Implementing the other types should be straighforward.
 --
 -- See also: http://www.imagemagick.org/Usage/formats/#netpbm
@@ -331,7 +331,7 @@ pgmBodyParser header@PPMHeader { ppmWidth = width, ppmHeight = height } = do
 
   maxGreyVal <- decimalC
   when (not $ isValidMaxval maxGreyVal) $
-    fail $ "PGM: invalid color maxval " ++ show maxGreyVal
+    fail $ "PGM: invalid grey maxval " ++ show maxGreyVal
   skipMany comment
 
   singleWhitespace -- obligatory SINGLE whitespace; starting from here, comments are not allowed any more
@@ -412,6 +412,34 @@ pbmAsciiBodyParser header@PPMHeader { ppmWidth = width, ppmHeight = height } = d
     toBool w  = fail $ "ASCII bit must be '0' or '1', not " ++ show (chr $ fromIntegral w)
 
 
+pgmAsciiBodyParser :: PPMHeader -> Parser PPM
+pgmAsciiBodyParser header@PPMHeader { ppmWidth = width, ppmHeight = height } = do
+
+  sep
+
+  maxGreyVal <- decimalC
+  when (not $ isValidMaxval maxGreyVal) $
+    fail $ "PGM: invalid grey maxval " ++ show maxGreyVal
+  skipMany comment
+
+  singleWhitespace -- obligatory SINGLE whitespace; starting from here, comments are not allowed any more
+
+  let n = height * width
+
+  -- TODO size-check the int by first putting it in Word64 and limiting decimal length
+  raster <- case maxGreyVal of -- 1 or 2 bytes per pixel
+    -- Parse pixel data into vector, making sure that words don't exceed maxGreyVal
+    m | m < 256 -> PgmPixelData8  <$> U.replicateM n (A.takeWhile isSpace_w8 *> (PgmPixel8  <$> decimal))
+    _           -> PgmPixelData16 <$> U.replicateM n (A.takeWhile isSpace_w8 *> (PgmPixel16 <$> decimal))
+
+  option () (A.takeWhile1 isSpace_w8 *> takeLazyByteString *> pure ())
+
+  -- Now we should be at the end of file.
+  endOfInput <?> "there is junk after the ASCII raster that is not separated by whitespace"
+
+  return $ PPM header raster
+
+
 imageParserOfType :: Maybe PPMType -> Parser PPM
 imageParserOfType mpN = do
   header@PPMHeader { ppmType } <- headerParser
@@ -422,6 +450,7 @@ imageParserOfType mpN = do
 
   case ppmType of
     P1 -> pbmAsciiBodyParser header
+    P2 -> pgmAsciiBodyParser header
     P4 -> pbmBodyParser header
     P5 -> pgmBodyParser header
     P6 -> ppmBodyParser header
