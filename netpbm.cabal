@@ -52,3 +52,18 @@ test-Suite tests
     , hspec >= 1.3.0.1
     , HUnit >= 1.2
   ghc-options: -Wall
+
+
+benchmark bench
+  default-language: Haskell2010
+  type: exitcode-stdio-1.0
+  hs-source-dirs:
+    bench
+  main-is:
+    Bench.hs
+  build-depends:
+      base >= 4
+    , netpbm
+    , bytestring >= 0.9
+    , criterion >= 0.6.0.0
+  ghc-options: -Wall
