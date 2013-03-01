@@ -4,10 +4,9 @@
 
 -- | Parsing the netpbm image formates (PBM, PGM and PPM, both ASCII and binary) from 'ByteString's.
 --
--- To parse one of these formats, use `parsePPM`.
+-- All netpbm image formats are implemented (P1 - P6).
 --
--- Currently, only P1, P2, P4, P5 and P6 images are implemented.
--- Implementing the other types should be straighforward.
+-- To parse one of these formats, use `parsePPM`.
 --
 -- See also: http://www.imagemagick.org/Usage/formats/#netpbm
 module Graphics.Netpbm (
@@ -440,6 +439,36 @@ pgmAsciiBodyParser header@PPMHeader { ppmWidth = width, ppmHeight = height } = d
   return $ PPM header raster
 
 
+ppmAsciiBodyParser :: PPMHeader -> Parser PPM
+ppmAsciiBodyParser header@PPMHeader { ppmWidth = width, ppmHeight = height } = do
+
+  sep
+
+  maxColorVal <- decimalC
+  when (not $ isValidMaxval maxColorVal) $
+    fail $ "PGM: invalid color maxval " ++ show maxColorVal
+  skipMany comment
+
+  singleWhitespace -- obligatory SINGLE whitespace; starting from here, comments are not allowed any more
+
+  let n = height * width
+      d8  = A.takeWhile isSpace_w8 *> decimal :: Parser Word8
+      d16 = A.takeWhile isSpace_w8 *> decimal :: Parser Word16
+
+  -- TODO size-check the int by first putting it in Word64 and limiting decimal length
+  raster <- case maxColorVal of -- 1 or 2 bytes per pixel
+    -- Parse pixel data into vector, making sure that words don't exceed maxColorVal
+    m | m < 256 -> PpmPixelDataRGB8  <$> U.replicateM n (PpmPixelRGB8  <$> d8  <*> d8  <*> d8 )
+    _           -> PpmPixelDataRGB16 <$> U.replicateM n (PpmPixelRGB16 <$> d16 <*> d16 <*> d16)
+
+  option () (A.takeWhile1 isSpace_w8 *> takeLazyByteString *> pure ())
+
+  -- Now we should be at the end of file.
+  endOfInput <?> "there is junk after the ASCII raster that is not separated by whitespace"
+
+  return $ PPM header raster
+
+
 imageParserOfType :: Maybe PPMType -> Parser PPM
 imageParserOfType mpN = do
   header@PPMHeader { ppmType } <- headerParser
@@ -451,11 +480,10 @@ imageParserOfType mpN = do
   case ppmType of
     P1 -> pbmAsciiBodyParser header
     P2 -> pgmAsciiBodyParser header
+    P3 -> ppmAsciiBodyParser header
     P4 -> pbmBodyParser header
     P5 -> pgmBodyParser header
     P6 -> ppmBodyParser header
-    -- TODO implement the other types
-    p  -> fail $ "haskell-netpbm error: " ++ show p ++ " images is not yet supported"
 
 
 imageParser :: Parser PPM
