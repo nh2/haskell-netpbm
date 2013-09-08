@@ -62,6 +62,7 @@ data PPM = PPM {
 , ppmData   :: PpmPixelData
 }
 
+-- | Meta information about the image: The exact PPM format and dimensions.
 data PPMHeader = PPMHeader {
   ppmType   :: PPMType
 , ppmWidth  :: Int
@@ -107,10 +108,14 @@ data PpmPixelData = PpmPixelDataRGB8 (U.Vector PpmPixelRGB8)   -- ^ For 8-bit PP
                   | PgmPixelData16 (U.Vector PgmPixel16)       -- ^ For 16-bit PGMs.
 
 
+-- | Converts a vector of pixels to a list for convenience.
 pixelVectorToList :: (U.Unbox a) => U.Vector a -> [a]
 pixelVectorToList = U.toList
 
 
+-- | Converts pixel data to a list of positive `Int`s.
+--
+-- How big they can become depends on the bit depth of the pixel data.
 pixelDataToIntList :: PpmPixelData -> [Int]
 pixelDataToIntList d = case d of
   PpmPixelDataRGB8 v  -> concat [ map fromIntegral [r, g, b] | PpmPixelRGB8 r g b  <- U.toList v ]
