@@ -64,9 +64,9 @@ data PPM = PPM {
 
 -- | Meta information about the image: The exact PPM format and dimensions.
 data PPMHeader = PPMHeader {
-  ppmType   :: PPMType
-, ppmWidth  :: Int
-, ppmHeight :: Int
+  ppmType   :: !PPMType
+, ppmWidth  :: !Int
+, ppmHeight :: !Int
 } deriving (Eq, Show)
 
 instance Show PPM where
