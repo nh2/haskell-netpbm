@@ -41,8 +41,7 @@ import           Foreign.Storable (Storable (..))
 
 import qualified Data.Vector.Unboxed as U
 import           Data.Vector.Unboxed ((!))
-import qualified Data.Vector.Generic
-import qualified Data.Vector.Generic.Mutable as VGM
+import qualified Data.Vector.Unboxed.Mutable as UM
 
 import Data.Vector.Unboxed.Deriving
 
@@ -358,7 +357,7 @@ pbmBodyParser header@PPMHeader { ppmWidth = width, ppmHeight = height } = do
   word8Vector <- U.replicateM (height * widthBytes) anyWord8
 
   let bits = U.create $ do
-        v <- VGM.replicate (width * height) (PbmPixel False)
+        v <- UM.replicate (width * height) (PbmPixel False)
         forM_ [0..height-1] $ \row ->
           forM_ [0..width-1] $ \col ->
             let i            = row * width + col
@@ -367,7 +366,7 @@ pbmBodyParser header@PPMHeader { ppmWidth = width, ppmHeight = height } = do
              -- We negate (see "not"), because:
              --   "1 is black, 0 is white."
              -- Also, `testBit` indexes from the right (LSB).
-             in VGM.write v i (PbmPixel . not $ (word8Vector ! i8) `testBit` (7 - bitN))
+             in UM.write v i (PbmPixel . not $ (word8Vector ! i8) `testBit` (7 - bitN))
         return v
 
   return $ PPM header (PbmPixelData bits)
