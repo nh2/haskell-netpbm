@@ -150,6 +150,10 @@ derivingUnbox "PgmPixel16"
 
 -- * Storable instance for pixels
 
+-- TODO These are currently not used.
+--      Test that Store.Dictionary generates the right data,
+--      then write use a storable instead of unboxed vector.
+
 storePpmPixel8 :: Store.Dictionary PpmPixelRGB8
 storePpmPixel8 =
   Store.run $ liftA3 PpmPixelRGB8
