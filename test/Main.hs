@@ -1,8 +1,8 @@
 {-# LANGUAGE NamedFieldPuns, OverloadedStrings #-}
 
-import qualified Data.ByteString as BS
 import           Control.Applicative
 import           Control.Monad
+import qualified Data.ByteString as BS
 import           Test.Hspec
 import           Test.HUnit
 

@@ -39,9 +39,9 @@ import           Data.Word (Word8, Word16)
 import           Foreign.Storable.Record as Store
 import           Foreign.Storable (Storable (..))
 
-import qualified Data.Vector.Unboxed as U
-import           Data.Vector.Unboxed ((!))
-import qualified Data.Vector.Unboxed.Mutable as UM
+import qualified Data.Vector.Storable as S
+import           Data.Vector.Storable ((!))
+import qualified Data.Vector.Storable.Mutable as SM
 
 import Data.Vector.Unboxed.Deriving
 
@@ -101,16 +101,16 @@ data PgmPixel16 = PgmPixel16 {-# UNPACK #-} !Word16
 
 -- | Image data, either 8 or 16 bits.
 -- TODO rename to PNM
-data PpmPixelData = PpmPixelDataRGB8 (U.Vector PpmPixelRGB8)   -- ^ For 8-bit PPMs.
-                  | PpmPixelDataRGB16 (U.Vector PpmPixelRGB16) -- ^ For 16-bit PPMs.
-                  | PbmPixelData (U.Vector PbmPixel)           -- ^ For 1-bit PBMs.
-                  | PgmPixelData8 (U.Vector PgmPixel8)         -- ^ For 8-bit PGMs.
-                  | PgmPixelData16 (U.Vector PgmPixel16)       -- ^ For 16-bit PGMs.
+data PpmPixelData = PpmPixelDataRGB8 (S.Vector PpmPixelRGB8)   -- ^ For 8-bit PPMs.
+                  | PpmPixelDataRGB16 (S.Vector PpmPixelRGB16) -- ^ For 16-bit PPMs.
+                  | PbmPixelData (S.Vector PbmPixel)           -- ^ For 1-bit PBMs.
+                  | PgmPixelData8 (S.Vector PgmPixel8)         -- ^ For 8-bit PGMs.
+                  | PgmPixelData16 (S.Vector PgmPixel16)       -- ^ For 16-bit PGMs.
 
 
 -- | Converts a vector of pixels to a list for convenience.
-pixelVectorToList :: (U.Unbox a) => U.Vector a -> [a]
-pixelVectorToList = U.toList
+pixelVectorToList :: (Storable a) => S.Vector a -> [a]
+pixelVectorToList = S.toList
 
 
 -- | Converts pixel data to a list of positive `Int`s.
@@ -118,14 +118,16 @@ pixelVectorToList = U.toList
 -- How big they can become depends on the bit depth of the pixel data.
 pixelDataToIntList :: PpmPixelData -> [Int]
 pixelDataToIntList d = case d of
-  PpmPixelDataRGB8 v  -> concat [ map fromIntegral [r, g, b] | PpmPixelRGB8 r g b  <- U.toList v ]
-  PpmPixelDataRGB16 v -> concat [ map fromIntegral [r, g, b] | PpmPixelRGB16 r g b <- U.toList v ]
-  PbmPixelData v      ->        [ if b then 1 else 0         | PbmPixel b          <- U.toList v ]
-  PgmPixelData8 v     ->        [ fromIntegral x             | PgmPixel8 x         <- U.toList v ]
-  PgmPixelData16 v    ->        [ fromIntegral x             | PgmPixel16 x        <- U.toList v ]
+  PpmPixelDataRGB8 v  -> concat [ map fromIntegral [r, g, b] | PpmPixelRGB8 r g b  <- S.toList v ]
+  PpmPixelDataRGB16 v -> concat [ map fromIntegral [r, g, b] | PpmPixelRGB16 r g b <- S.toList v ]
+  PbmPixelData v      ->        [ if b then 1 else 0         | PbmPixel b          <- S.toList v ]
+  PgmPixelData8 v     ->        [ fromIntegral x             | PgmPixel8 x         <- S.toList v ]
+  PgmPixelData16 v    ->        [ fromIntegral x             | PgmPixel16 x        <- S.toList v ]
 
 
 -- * Unbox instance for pixels
+--
+-- Not used internally, but an Unbox instance might be convenient for users.
 
 derivingUnbox "PpmPixelRGB8"
     [t| PpmPixelRGB8 -> (Word8, Word8, Word8) |]
@@ -154,10 +156,6 @@ derivingUnbox "PgmPixel16"
 
 
 -- * Storable instance for pixels
-
--- TODO These are currently not used.
---      Test that Store.Dictionary generates the right data,
---      then write use a storable instead of unboxed vector.
 
 storePpmPixel8 :: Store.Dictionary PpmPixelRGB8
 storePpmPixel8 =
@@ -324,9 +322,9 @@ ppmBodyParser header@PPMHeader { ppmWidth = width, ppmHeight = height } = do
   raster <- case maxColorVal of -- 1 or 2 bytes per pixel
     -- Parse pixel data into vector, making sure that words don't exceed maxColorVal
     m | m < 256   -> let v = word8max (fromIntegral m)
-                      in PpmPixelDataRGB8  <$> U.replicateM (height * width) (PpmPixelRGB8  <$> v <*> v <*> v)
+                      in PpmPixelDataRGB8  <$> S.replicateM (height * width) (PpmPixelRGB8  <$> v <*> v <*> v)
     m | otherwise -> let v = word16max (fromIntegral m)
-                      in PpmPixelDataRGB16 <$> U.replicateM (height * width) (PpmPixelRGB16 <$> v <*> v <*> v)
+                      in PpmPixelDataRGB16 <$> S.replicateM (height * width) (PpmPixelRGB16 <$> v <*> v <*> v)
 
   return $ PPM header raster
 
@@ -346,9 +344,9 @@ pgmBodyParser header@PPMHeader { ppmWidth = width, ppmHeight = height } = do
   raster <- case maxGreyVal of -- 1 or 2 bytes per pixel
     -- Parse pixel data into vector, making sure that words don't exceed maxGreyVal
     m | m < 256   -> let v = word8max (fromIntegral m)
-                      in PgmPixelData8  <$> U.replicateM (height * width) (PgmPixel8  <$> v)
+                      in PgmPixelData8  <$> S.replicateM (height * width) (PgmPixel8  <$> v)
     m | otherwise -> let v = word16max (fromIntegral m)
-                      in PgmPixelData16 <$> U.replicateM (height * width) (PgmPixel16 <$> v)
+                      in PgmPixelData16 <$> S.replicateM (height * width) (PgmPixel16 <$> v)
 
   return $ PPM header raster
 
@@ -363,10 +361,10 @@ pbmBodyParser header@PPMHeader { ppmWidth = width, ppmHeight = height } = do
   let widthBytes = (width + 7) // 8
 
   -- Parse pixel data first in into a Word8 vector, then translate to a Bool vector, leaving the don't-cares at the end out.
-  word8Vector <- U.replicateM (height * widthBytes) anyWord8
+  word8Vector <- S.replicateM (height * widthBytes) anyWord8
 
-  let bits = U.create $ do
-        v <- UM.replicate (width * height) (PbmPixel False)
+  let bits = S.create $ do
+        v <- SM.replicate (width * height) (PbmPixel False)
         forM_ [0..height-1] $ \row ->
           forM_ [0..width-1] $ \col ->
             let i            = row * width + col
@@ -375,7 +373,7 @@ pbmBodyParser header@PPMHeader { ppmWidth = width, ppmHeight = height } = do
              -- We negate (see "not"), because:
              --   "1 is black, 0 is white."
              -- Also, `testBit` indexes from the right (LSB).
-             in UM.write v i (PbmPixel . not $ (word8Vector ! i8) `testBit` (7 - bitN))
+             in SM.write v i (PbmPixel . not $ (word8Vector ! i8) `testBit` (7 - bitN))
         return v
 
   return $ PPM header (PbmPixelData bits)
@@ -399,7 +397,7 @@ pbmAsciiBodyParser header@PPMHeader { ppmWidth = width, ppmHeight = height } = d
   --   "White space in the raster section is ignored."
   -- Don't allow it *after* so that we can check if there is a whitespace between raster and optional junk.
   -- I use `generateM` here instead of fromList . (`sepBy` [whitespace]) because I believe it's faster.
-  bits <- U.replicateM n (A.takeWhile isSpace_w8 *> asciiBit)
+  bits <- S.replicateM n (A.takeWhile isSpace_w8 *> asciiBit)
 
   -- From the spec (who the heck can even come up with this):
   --   "You can put any junk you want after the raster, if it starts with a white space character."
@@ -436,8 +434,8 @@ pgmAsciiBodyParser header@PPMHeader { ppmWidth = width, ppmHeight = height } = d
   -- TODO size-check the int by first putting it in Word64 and limiting decimal length
   raster <- case maxGreyVal of -- 1 or 2 bytes per pixel
     -- Parse pixel data into vector, making sure that words don't exceed maxGreyVal
-    m | m < 256 -> PgmPixelData8  <$> U.replicateM n (A.takeWhile isSpace_w8 *> (PgmPixel8  <$> decimal))
-    _           -> PgmPixelData16 <$> U.replicateM n (A.takeWhile isSpace_w8 *> (PgmPixel16 <$> decimal))
+    m | m < 256 -> PgmPixelData8  <$> S.replicateM n (A.takeWhile isSpace_w8 *> (PgmPixel8  <$> decimal))
+    _           -> PgmPixelData16 <$> S.replicateM n (A.takeWhile isSpace_w8 *> (PgmPixel16 <$> decimal))
 
   option () (A.takeWhile1 isSpace_w8 *> takeLazyByteString *> pure ())
 
@@ -466,8 +464,8 @@ ppmAsciiBodyParser header@PPMHeader { ppmWidth = width, ppmHeight = height } = d
   -- TODO size-check the int by first putting it in Word64 and limiting decimal length
   raster <- case maxColorVal of -- 1 or 2 bytes per pixel
     -- Parse pixel data into vector, making sure that words don't exceed maxColorVal
-    m | m < 256 -> PpmPixelDataRGB8  <$> U.replicateM n (PpmPixelRGB8  <$> d8  <*> d8  <*> d8 )
-    _           -> PpmPixelDataRGB16 <$> U.replicateM n (PpmPixelRGB16 <$> d16 <*> d16 <*> d16)
+    m | m < 256 -> PpmPixelDataRGB8  <$> S.replicateM n (PpmPixelRGB8  <$> d8  <*> d8  <*> d8 )
+    _           -> PpmPixelDataRGB16 <$> S.replicateM n (PpmPixelRGB16 <$> d16 <*> d16 <*> d16)
 
   option () (A.takeWhile1 isSpace_w8 *> takeLazyByteString *> pure ())
 
