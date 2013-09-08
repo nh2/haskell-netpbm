@@ -1,5 +1,5 @@
 name:          netpbm
-version:       0.3.0
+version:       1.0.0
 license:       MIT
 copyright:     2013 Niklas Hambüchen <mail@nh2.me>
 author:        Niklas Hambüchen <mail@nh2.me>
@@ -18,7 +18,12 @@ description:
   All netpbm image formats are implemented (P1 - P6).
   .
   The current implementation parses PPM images at around 10 MB/s on a Core i5-2520M.
-
+  .
+  CHANGELOG
+  .
+  Version 1.0.0
+  .
+  * Use storable instead of unboxed vectors to allow easier integration with Ptr based APIs.
 
 source-repository head
   type:      git
