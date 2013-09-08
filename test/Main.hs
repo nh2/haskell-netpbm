@@ -3,6 +3,10 @@
 import           Control.Applicative
 import           Control.Monad
 import qualified Data.ByteString as BS
+import qualified Data.ByteString.Internal as BSI
+import qualified Data.Vector.Storable as S
+import           Foreign.Ptr (castPtr)
+import           Foreign.Marshal.Utils (copyBytes)
 import           Test.Hspec
 import           Test.HUnit
 
@@ -311,6 +315,23 @@ main = hspec $ do
     parseTestFile "SIPI-convert-plain.pbm" "a file produced by convert" $
       -- convert SIPI.tiff -compress none SIPI-convert-plain.pbm
       checkSinglePPM P1 (256,256)
+
+
+  describe "In-memory format" $ do
+
+    it "represents 8-bit images in rgbrgbrgb... format" $ do
+
+      let d = PpmPixelDataRGB8 $ S.fromList [ PpmPixelRGB8 1 2 3
+                                            , PpmPixelRGB8 4 5 6
+                                            , PpmPixelRGB8 7 8 9 ]
+      let PpmPixelDataRGB8 vec = d
+
+      bs <- BSI.create 9 $ \bsPtrWord8 ->
+        S.unsafeWith vec $ \ppmPixelRgb8Ptr ->
+          copyBytes bsPtrWord8 (castPtr ppmPixelRgb8Ptr) 9
+
+      bs `shouldBe` "\1\2\3\4\5\6\7\8\9"
+
 
 -- Some result data
 
