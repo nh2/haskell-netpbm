@@ -1,5 +1,5 @@
 name:          netpbm
-version:       1.0.0
+version:       1.0.1
 license:       MIT
 copyright:     2013 Niklas Hambüchen <mail@nh2.me>
 author:        Niklas Hambüchen <mail@nh2.me>
@@ -20,6 +20,10 @@ description:
   The current implementation parses PPM images at around 10 MB/s on a Core i5-2520M.
   .
   CHANGELOG
+  .
+  Version 1.0.1
+  .
+  * Added required Vector imports necessary for deriving Unbox instances.
   .
   Version 1.0.0
   .
