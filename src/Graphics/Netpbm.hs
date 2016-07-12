@@ -43,9 +43,6 @@ import qualified Data.Vector.Storable as S
 import           Data.Vector.Storable ((!))
 import qualified Data.Vector.Storable.Mutable as SM
 
-import qualified Data.Vector.Generic
-import qualified Data.Vector.Generic.Mutable
-
 import Data.Vector.Unboxed.Deriving
 
 
