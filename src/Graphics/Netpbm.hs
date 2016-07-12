@@ -237,7 +237,7 @@ magicNumberParser = do
 -- to consume no input, which makes it loop forever when stuck into something like `many`.
 {-# INLINE comment #-}
 comment :: Parser ByteString
-comment = "#" .*> A.takeWhile isNotNewline <* endOfLine
+comment = "#" *> A.takeWhile isNotNewline <* endOfLine
   where
     isNotNewline w = w /= 10 && w /= 13
 
