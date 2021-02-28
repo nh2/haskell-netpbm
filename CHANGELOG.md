@@ -1,3 +1,7 @@
+# 1.0.4
+
+* GHC 9.0 compatibility
+
 # 1.0.3
 
 * Package maintenance improvements only (base-4.5 excluded). See #3

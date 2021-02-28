@@ -1,5 +1,5 @@
 name:          netpbm
-version:       1.0.3
+version:       1.0.4
 license:       MIT
 copyright:     2013 Niklas Hambüchen <mail@nh2.me>
 author:        Niklas Hambüchen <mail@nh2.me>
@@ -7,7 +7,7 @@ maintainer:    Niklas Hambüchen <mail@nh2.me>
 category:      Codec, Graphics
 build-type:    Simple
 stability:     experimental
-tested-With:   GHC==7.4.2
+tested-With:   GHC==7.4.2, GHC==9.0.1
 cabal-version: >= 1.10
 homepage:      https://github.com/nh2/haskell-netpbm
 bug-Reports:   https://github.com/nh2/haskell-netpbm/issues
