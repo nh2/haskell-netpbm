@@ -125,36 +125,6 @@ pixelDataToIntList d = case d of
   PgmPixelData16 v    ->        [ fromIntegral x             | PgmPixel16 x        <- S.toList v ]
 
 
--- * Unbox instance for pixels
---
--- Not used internally, but an Unbox instance might be convenient for users.
-
-derivingUnbox "PpmPixelRGB8"
-    [t| PpmPixelRGB8 -> (Word8, Word8, Word8) |]
-    [| \ (PpmPixelRGB8 a b c) -> (a, b, c) |]
-    [| \ (a, b, c) -> PpmPixelRGB8 a b c |]
-
-derivingUnbox "PpmPixelRGB16"
-    [t| PpmPixelRGB16 -> (Word16, Word16, Word16) |]
-    [| \ (PpmPixelRGB16 a b c) -> (a, b, c) |]
-    [| \ (a, b, c) -> PpmPixelRGB16 a b c |]
-
-derivingUnbox "PbmPixel"
-    [t| PbmPixel -> Bool |]
-    [| \ (PbmPixel b) -> b |]
-    [| \ b -> PbmPixel b |]
-
-derivingUnbox "PgmPixel8"
-    [t| PgmPixel8 -> Word8 |]
-    [| \ (PgmPixel8 x) -> x |]
-    [| \ x -> PgmPixel8 x |]
-
-derivingUnbox "PgmPixel16"
-    [t| PgmPixel16 -> Word16 |]
-    [| \ (PgmPixel16 x) -> x |]
-    [| \ x -> PgmPixel16 x |]
-
-
 -- * Storable instance for pixels
 
 storePpmPixel8 :: Store.Dictionary PpmPixelRGB8
@@ -545,3 +515,33 @@ parsePPM bs = case parse imagesParser bs of
       Done rest images -> Right (images, Just rest)
       Partial _        -> error "parsePPM bug: Got a partial result after end of input"
       Fail _ cs e      -> Left $ e ++ "; contexts: " ++ show cs
+
+
+-- * Unbox instance for pixels
+--
+-- Not used internally, but an Unbox instance might be convenient for users.
+
+derivingUnbox "PpmPixelRGB8"
+    [t| PpmPixelRGB8 -> (Word8, Word8, Word8) |]
+    [| \ (PpmPixelRGB8 a b c) -> (a, b, c) |]
+    [| \ (a, b, c) -> PpmPixelRGB8 a b c |]
+
+derivingUnbox "PpmPixelRGB16"
+    [t| PpmPixelRGB16 -> (Word16, Word16, Word16) |]
+    [| \ (PpmPixelRGB16 a b c) -> (a, b, c) |]
+    [| \ (a, b, c) -> PpmPixelRGB16 a b c |]
+
+derivingUnbox "PbmPixel"
+    [t| PbmPixel -> Bool |]
+    [| \ (PbmPixel b) -> b |]
+    [| \ b -> PbmPixel b |]
+
+derivingUnbox "PgmPixel8"
+    [t| PgmPixel8 -> Word8 |]
+    [| \ (PgmPixel8 x) -> x |]
+    [| \ x -> PgmPixel8 x |]
+
+derivingUnbox "PgmPixel16"
+    [t| PgmPixel16 -> Word16 |]
+    [| \ (PgmPixel16 x) -> x |]
+    [| \ x -> PgmPixel16 x |]
